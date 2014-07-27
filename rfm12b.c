@@ -30,41 +30,19 @@
 #include <linux/poll.h>
 #include <linux/spi/spi.h>
 
-#define BUILD_MODULE   1
+// #define RFM12B_DEBUG
+
 
 #include "rfm12b_config.h"
-
 #if defined(MODULE_BOARD_CONFIGURED)
+
 
 #include "rfm12b_ioctl.h"
 #include "rfm12b_jeenode.h"
 
-static u8 group_id      = RFM12B_DEFAULT_GROUP_ID;
-static u8 band_id         = RFM12B_DEFAULT_BAND_ID;
-static u8 bit_rate      = RFM12B_DEFAULT_BIT_RATE;
-static u8 jee_id         = RFM12B_DEFAULT_JEE_ID;
-static u8 jee_autoack   = RFM12B_DEFAULT_JEE_AUTOACK;
+#include <linux/spi/spi.h>
 
-module_param(group_id, byte, 0000);
-MODULE_PARM_DESC(group_id,
-   "group ID for rfm12b modules. can be changed per board via ioctl().");
-module_param(band_id, byte, 0000);
-MODULE_PARM_DESC(band_id,
-   "band ID for rfm12b modules. can be changed per board via ioctl(). "
-   "1 .. 433mhz; 2 .. 868mhz; 3 .. 915mhz");
-module_param(bit_rate, byte, 0000);
-MODULE_PARM_DESC(bit_rate,
-   "bit rate setting byte for rfm12b modules (see datasheet). "
-   "can be changed per board via ioctl().");
-module_param(jee_id, byte, 0000);
-MODULE_PARM_DESC(jee_id,
-   "jeenode id for rfm12b modules, or 0 to disable the jee protocol. this "
-   "can be changed per board via ioctl().");
-module_param(jee_autoack, byte, 0000);
-MODULE_PARM_DESC(jee_autoack,
-   "if the jee-protocol is enabled by setting a jee-id, enable or disable "
-   "the automated sending of ACKs when a packet requests them. Can also be "
-   "changed per board via ioctl().");
+#include "rfm12b_config.h"
 
 #define RF_READ_STATUS     0x0000
 #define RF_IDLE_MODE       0x820D
@@ -74,34 +52,18 @@ MODULE_PARM_DESC(jee_autoack,
 #define RF_XMITTER_ON      0x823D
 #define RF_RX_FIFO_READ    0xB000
 
+#define OPEN_WAIT_MILLIS   (50)
+
+
+
 #define RF_STATUS_BIT_LBAT          (0x0400)
 #define RF_STATUS_BIT_FFEM          (0x0200)
 #define RF_STATUS_BIT_FFOV_RGUR      (0x2000)
 #define RF_STATUS_BIT_RSSI          (0x0100)
 #define RF_STATUS_BIT_FFIT_RGIT      (0x8000)
 
-#define RF_MAX_DATA_LEN    66
-#define RF_EXTRA_LEN       4 // 4 : 1 byte hdr, 1 byte len, 2 bytes crc16 (see JeeLib)
-#define RF_MAX_LEN         (RF_MAX_DATA_LEN+RF_EXTRA_LEN)
-
-#define OPEN_WAIT_MILLIS   (50)
-
-#define READ_FIFO_WAIT           (0)
-#define WRITE_TX_WAIT            (0)
-
-#define RXTX_WATCHDOG_JIFFIES    (HZ/4)
-#define TRYSEND_RETRY_JIFFIES      (HZ/16)
-
-#define DATA_BUF_SIZE            (512)
 #define NUM_MAX_CONCURRENT_MSG   (3)
 
-#define INTERPRETS_JEENODE_PROTOCOL(rfm12)   (0 != (rfm12)->jee_id)
-#define CAN_SEND_BYTES_OF_LENGTH(LEN)      \
-   (DATA_BUF_SIZE - (rfm12->out_cur_end - rfm12->out_buf) >= (LEN) + RF_EXTRA_LEN)
-
-static LIST_HEAD(device_list);
-static DEFINE_MUTEX(device_list_lock);
-static DECLARE_BITMAP(minors, RFM12B_NUM_SPI_MINORS);
 
 typedef enum _rfm12_state_t {
    RFM12_STATE_NO_CHANGE      = 0,
@@ -141,6 +103,15 @@ struct rfm12_data {
    struct list_head       device_entry;
 
    u8                   open, should_release, trysend;
+#ifdef RFM12B_DEBUG
+   u8					irq_active;
+   unsigned long		irq_raced;
+   unsigned long		safe_jiffies;
+//   rfm12_state_t		saved_state;
+#endif
+#ifdef RFM12B_USES_HOMEEASY
+   u8					homeeasy_active;
+#endif
    rfm12_state_t        state;
    u8                      group_id, band_id, bit_rate, jee_id, jee_autoack;
    unsigned long        bytes_recvd, pkts_recvd;
@@ -163,9 +134,68 @@ struct rfm12_data {
    wait_queue_head_t       wait_write;
 };
 
+#ifdef RFM12B_USES_HOMEEASY
+#include "rfm12b_homeeasy.h"
+#endif
+
+
+static u8 group_id      = RFM12B_DEFAULT_GROUP_ID;
+static u8 band_id         = RFM12B_DEFAULT_BAND_ID;
+static u8 bit_rate      = RFM12B_DEFAULT_BIT_RATE;
+static u8 jee_id         = RFM12B_DEFAULT_JEE_ID;
+static u8 jee_autoack   = RFM12B_DEFAULT_JEE_AUTOACK;
+
+module_param(group_id, byte, 0000);
+MODULE_PARM_DESC(group_id,
+   "group ID for rfm12b modules. can be changed per board via ioctl().");
+module_param(band_id, byte, 0000);
+MODULE_PARM_DESC(band_id,
+   "band ID for rfm12b modules. can be changed per board via ioctl(). "
+   "1 .. 433mhz; 2 .. 868mhz; 3 .. 915mhz");
+module_param(bit_rate, byte, 0000);
+MODULE_PARM_DESC(bit_rate,
+   "bit rate setting byte for rfm12b modules (see datasheet). "
+   "can be changed per board via ioctl().");
+module_param(jee_id, byte, 0000);
+MODULE_PARM_DESC(jee_id,
+   "jeenode id for rfm12b modules, or 0 to disable the jee protocol. this "
+   "can be changed per board via ioctl().");
+module_param(jee_autoack, byte, 0000);
+MODULE_PARM_DESC(jee_autoack,
+   "if the jee-protocol is enabled by setting a jee-id, enable or disable "
+   "the automated sending of ACKs when a packet requests them. Can also be "
+   "changed per board via ioctl().");
+
+
+
+#define RF_MAX_DATA_LEN    66
+#define RF_EXTRA_LEN       4 // 4 : 1 byte hdr, 1 byte len, 2 bytes crc16 (see JeeLib)
+#define RF_MAX_LEN         (RF_MAX_DATA_LEN+RF_EXTRA_LEN)
+
+
+#define READ_FIFO_WAIT           (0)
+#define WRITE_TX_WAIT            (0)
+
+#define RXTX_WATCHDOG_JIFFIES    (HZ/4)
+#define TRYSEND_RETRY_JIFFIES      (HZ/16)
+
+#define DATA_BUF_SIZE            (512)
+
+#define INTERPRETS_JEENODE_PROTOCOL(rfm12)   (0 != (rfm12)->jee_id)
+#define CAN_SEND_BYTES_OF_LENGTH(LEN)      \
+   (DATA_BUF_SIZE - (rfm12->out_cur_end - rfm12->out_buf) >= (LEN) + RF_EXTRA_LEN)
+
+static LIST_HEAD(device_list);
+static DEFINE_MUTEX(device_list_lock);
+static DECLARE_BITMAP(minors, RFM12B_NUM_SPI_MINORS);
+
+
+
 // forward declarations
-static void
-rfm12_handle_interrupt(struct rfm12_data* rfm12);
+static int
+rfm12_reset(struct rfm12_data* rfm12);
+struct spi_transfer
+rfm12_make_spi_transfer(uint16_t cmd, u8* tx_buf, u8* rx_buf);
 static int
 rfm12_request_fifo_byte(struct rfm12_data* rfm12);
 static int
@@ -178,8 +208,6 @@ static int
 rfm12_try_sending(struct rfm12_data* rfm12);
 static void
 rfm12_update_rxtx_watchdog(struct rfm12_data* rfm12, u8 cancelTimer);
-static int
-rfm12_reset(struct rfm12_data* rfm12);
 static void
 rfm12_apply_crc16(struct rfm12_data* rfm12, unsigned char* ptr, unsigned len);
 
@@ -284,7 +312,6 @@ rfm12_generic_spi_completion_handler(void *arg)
    spin_lock_irqsave(&rfm12->lock, flags);
 
    __rfm12_generic_spi_completion_handler(arg);
-
    spin_unlock_irqrestore(&rfm12->lock, flags);
 }
 
@@ -326,7 +353,6 @@ rfm12_send_generic_async_cmd(struct rfm12_data* rfm12, uint16_t* cmds,
    } 
    
    spi_message_add_tail(&spi_msg->spi_transfers[i-1], &spi_msg->spi_msg);
-
    err = spi_async(rfm12->spi, &spi_msg->spi_msg);
    if (err)
      __rfm12_generic_spi_completion_handler((void*)spi_msg);
@@ -409,6 +435,7 @@ rfm12_setup(struct rfm12_data* rfm12)
          ((rfm12->band_id & 0xff) << 4), tx_buf+0, NULL);
    tr.cs_change = 1;
    spi_message_add_tail(&tr, &msg);
+   // change to A620 for OOK
 
    tr2 = rfm12_make_spi_transfer(0xA640, tx_buf+2, NULL);
    tr2.cs_change = 1;
@@ -552,9 +579,13 @@ rfm12_rxtx_watchdog_expired(unsigned long ptr)
    struct rfm12_data* rfm12 = (struct rfm12_data*)ptr;
 
    spin_lock_irqsave(&rfm12->lock, flags);
-
-   if (RFM12_STATE_RECV >= rfm12->state &&
-         RFM12_STATE_LISTEN <= rfm12->state) {
+#ifdef RFM12B_DEBUG
+   printk(KERN_INFO RFM12B_DRV_NAME " : stuck in state: %d, IRQ: %d, enabled: %d",
+		   rfm12->state, platform_irq_return_pin_value(rfm12->spi->master->bus_num,rfm12->spi->chip_select),
+		   platform_irq_test_enabled(rfm12->spi->master->bus_num,rfm12->spi->chip_select));
+#endif
+   if ((RFM12_STATE_RECV >= rfm12->state) &&
+         (RFM12_STATE_LISTEN <= rfm12->state)) {
      rfm12->num_recv_timeouts++;
      (void)rfm12_finish_receiving(rfm12, 1);
    } else if (RFM12_STATE_SEND_PRE1 <= rfm12->state &&
@@ -744,7 +775,7 @@ rfm12_recv_spi_completion_handler(void *arg)
          ((status & RF_STATUS_BIT_FFIT_RGIT) && !(status & RF_STATUS_BIT_FFEM)) ||
          (status & RF_STATUS_BIT_FFOV_RGUR);
       
-   if (valid_interrupt && RFM12_STATE_LISTEN == rfm12->state)
+   if (valid_interrupt && (RFM12_STATE_LISTEN == rfm12->state))
          rfm12->state = RFM12_STATE_RECV;
 
    if (valid_interrupt) {
@@ -791,7 +822,9 @@ rfm12_recv_spi_completion_handler(void *arg)
            (void)rfm12_finish_receiving(rfm12, 1);
       }
    }
-
+#ifdef RFM12B_DEBUG
+   rfm12->irq_active=0;
+#endif
    spin_unlock_irqrestore(&rfm12->lock, flags);
    
    if (!rfm12->should_release &&
@@ -817,7 +850,6 @@ rfm12_send_spi_completion_handler(void *arg)
 
    status = (spi_msg->spi_rx[0] << 8) | spi_msg->spi_rx[1];
    rfm12->last_status = status;
-
    valid_interrupt =
          ((status & RF_STATUS_BIT_FFIT_RGIT) || (status & RF_STATUS_BIT_FFOV_RGUR));
 
@@ -827,8 +859,12 @@ rfm12_send_spi_completion_handler(void *arg)
          rfm12->num_send_underruns++;
          (void)rfm12_finish_sending(rfm12, 0);
       } else {
-         if (!RFM12B_RETRY_SEND_ON_RGUR && (status & RF_STATUS_BIT_FFOV_RGUR))
+         if (!RFM12B_RETRY_SEND_ON_RGUR && (status & RF_STATUS_BIT_FFOV_RGUR)) {
                rfm12->num_send_underruns++;
+#ifdef RFM12B_DEBUG
+               printk(KERN_INFO RFM12B_DRV_NAME " : send underrun in state %d",rfm12->state);
+#endif
+         }
          
          switch(rfm12->state) {
             case RFM12_STATE_SEND_PRE1:
@@ -863,9 +899,11 @@ rfm12_send_spi_completion_handler(void *arg)
          
          if (!packet_finished)
                rfm12_update_rxtx_watchdog(rfm12, 0);
-         }
+      }
    }
-
+#ifdef RFM12B_DEBUG
+   rfm12->irq_active=0;
+#endif
    spin_unlock_irqrestore(&rfm12->lock, flags);
 
    if (!rfm12->should_release && (!valid_interrupt || !packet_finished))
@@ -889,10 +927,12 @@ static int
 rfm12_write_tx_byte(struct rfm12_data* rfm12, u8 tx_byte)
 {
    uint16_t cmds[2];
-   
+/*#ifdef RFM12B_DEBUG
+   printk(KERN_INFO RFM12B_DRV_NAME " : writing %2x\n",tx_byte);
+#endif
+*/
    cmds[0] = RF_READ_STATUS;
    cmds[1] = RF_TXREG_WRITE | tx_byte;
-   
    return rfm12_send_generic_async_cmd(rfm12, cmds, 2,
       WRITE_TX_WAIT, rfm12_send_spi_completion_handler,
       RFM12_STATE_NO_CHANGE);
@@ -934,7 +974,7 @@ rfm12_trysend_completion_handler(void *arg)
 
    rfm12->last_status = status;
       
-   if ((RFM12_STATE_IDLE == rfm12->state || RFM12_STATE_LISTEN == rfm12->state) &&
+   if (((RFM12_STATE_IDLE == rfm12->state) || (RFM12_STATE_LISTEN == rfm12->state)) &&
        0 == (status & RF_STATUS_BIT_RSSI)) {
       uint16_t cmd[4];
             
@@ -1047,7 +1087,14 @@ static void
 rfm12_handle_interrupt(struct rfm12_data* rfm12)
 {
    spin_lock(&rfm12->lock);
-   
+#ifdef RFM12B_DEBUG
+   if(rfm12->irq_active) {
+	   rfm12->irq_raced++;
+	   printk(KERN_INFO RFM12B_DRV_NAME " : IRQ race in state %d\n",rfm12->state);
+   }
+   else
+	   rfm12->irq_active=1;
+#endif
    switch (rfm12->state) {
      case RFM12_STATE_LISTEN:
      case RFM12_STATE_RECV:
@@ -1095,6 +1142,11 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
    struct rfm12_data* rfm12 = (struct rfm12_data*)filp->private_data;
    int length = 0, bytes_to_copy = 0, mmovelen = 0, offset = 0;
    unsigned long flags;
+
+#ifdef RFM12B_USES_HOMEEASY
+   if (rfm12->homeeasy_active)
+	   return -EACCES;   // no read for OOK mode
+#endif
 
    if (rfm12->in_cur_end == rfm12->in_buf)
      wait_event_interruptible(rfm12->wait_read,
@@ -1145,6 +1197,11 @@ size_t count, loff_t *f_pos)
    int bytes_to_copy = 0, copied = 0, offset = 0;
    unsigned long flags;
    
+#ifdef RFM12B_USES_HOMEEASY
+   if (rfm12->homeeasy_active)
+	   return -EACCES;   // write is done by passing ul to ioctl
+#endif
+
    if (INTERPRETS_JEENODE_PROTOCOL(rfm12)) {
       offset = 0;
    } else {
@@ -1201,7 +1258,11 @@ rfm12_poll(struct file* filp, poll_table* wait)
 {
    unsigned int mask = 0;
    struct rfm12_data* rfm12 = (struct rfm12_data*)filp->private_data;
-   
+#ifdef RFM12B_USES_HOMEEASY
+   if (rfm12->homeeasy_active)
+	   return -EACCES;   // no read for OOK mode
+#endif
+
    poll_wait(filp, &rfm12->wait_read,  wait);
    poll_wait(filp, &rfm12->wait_write, wait);
    
@@ -1232,6 +1293,10 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
          s.num_send_underruns = rfm12->num_send_underruns;
          s.num_send_timeouts = rfm12->num_send_timeouts;
          s.low_battery = (0 != (rfm12->last_status & RF_STATUS_BIT_LBAT));
+#ifdef RFM12B_DEBUG
+         // s.num_irq_raced = rfm12->irq_raced;
+#endif
+
 
          if (0 != copy_to_user((rfm12b_stats*)arg, &s, sizeof(rfm12b_stats)))
                return -EACCES;
@@ -1343,7 +1408,28 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
          
          break;
       }
+#ifdef RFM12B_USES_HOMEEASY
+      case RFM12B_IOCTL_SET_HOMEEASY: {
+          int homeeasy;
+
+          if (0 != copy_from_user(&homeeasy, (int*)arg, sizeof(homeeasy)))
+                return -EACCES;
+
+          rfm12->homeeasy_active = (homeeasy ? 1 : 0);
+          rfm12_he_setup(rfm12);
+
+      }
       
+      case RFM12B_IOCTL_WRITE_HOMEEASY: {
+          u32 command;
+
+          if (0 != copy_from_user(&command, (u32*)arg, sizeof(command)))
+                return -EACCES;
+
+          rfm12_he_write(rfm12,command);
+      }
+#endif
+
       default:
             return -EINVAL;
    }
@@ -1426,6 +1512,14 @@ rfm12_open(struct inode *inode, struct file *filp)
           rfm12->in_cur_len_pos = rfm12->in_buf;
           rfm12->in_cur_end = rfm12->in_buf;
           rfm12->out_cur_end = rfm12->out_buf;
+#ifdef RFM12B_DEBUG
+          rfm12->irq_active = 0;
+          rfm12->irq_raced =0;
+          rfm12->safe_jiffies=0;
+#endif
+#ifdef	RFM12B_USES_HOMEEASY
+          rfm12->homeeasy_active = 0; // do not use initially
+#endif
       }
             
       if (0 == err)
@@ -1465,8 +1559,8 @@ rfm12_release(struct inode *inode, struct file *filp)
    if (0 == rfm12->open && 0 == rfm12->should_release) {     
      rfm12->should_release = 1;
                
-     if (RFM12_STATE_LISTEN == rfm12->state ||
-          RFM12_STATE_IDLE == rfm12->state) {
+     if ((RFM12_STATE_LISTEN == rfm12->state) ||
+          (RFM12_STATE_IDLE == rfm12->state)) {
         spin_unlock_irqrestore(&rfm12->lock, flags);
         rfm12_release_when_safe(rfm12);
         spin_lock_irqsave(&rfm12->lock, flags);

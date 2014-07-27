@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="com.arm.toolchain.baremetal.1892140817">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="com.arm.toolchain.baremetal.1892140817" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<externalSettings/>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="com.arm.eclipse.builder.armcc.error" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration buildProperties="" description="" id="com.arm.toolchain.baremetal.1892140817" name="Default" parent="org.eclipse.cdt.build.core.emptycfg">
+					<folderInfo id="com.arm.toolchain.baremetal.1892140817.230178247" name="/" resourcePath="">
+						<toolChain id="com.arm.toolchain.baremetal.306013354" name="com.arm.toolchain.baremetal" superClass="com.arm.toolchain.baremetal">
+							<targetPlatform id="com.arm.toolchain.baremetal.1892140817.297021617" name=""/>
+							<builder id="com.arm.toolchain.baremetal.builder.798958843" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="com.arm.toolchain.baremetal.builder"/>
+							<tool id="com.arm.tool.c.compiler.1320687685" name="ARM C Compiler" superClass="com.arm.tool.c.compiler"/>
+							<tool id="com.arm.tool.cpp.compiler.1919426545" name="ARM C++ Compiler" superClass="com.arm.tool.cpp.compiler">
+								<option id="com.arm.tool.c.compiler.option.incpath.1886661256" name="Include path (-I)" superClass="com.arm.tool.c.compiler.option.incpath" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Cubietruck Kernel/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Cubietruck Kernel/arch/arm/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/Cubietruck Kernel/usr/include}&quot;"/>
+								</option>
+								<option id="com.arm.tool.c.compiler.option.defmac.1566428731" name="Define macro (-D)" superClass="com.arm.tool.c.compiler.option.defmac" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="__KERNEL__=1"/>
+								</option>
+								<inputType id="com.arm.tool.c.compiler.input.298616120" superClass="com.arm.tool.c.compiler.input"/>
+								<inputType id="com.arm.tool.cpp.compiler.input.2007395558" superClass="com.arm.tool.cpp.compiler.input"/>
+							</tool>
+							<tool id="com.arm.tool.assembler.314526196" name="ARM Assembler" superClass="com.arm.tool.assembler"/>
+							<tool id="com.arm.tool.c.linker.541904079" name="ARM Linker" superClass="com.arm.tool.c.linker"/>
+							<tool id="com.arm.tool.librarian.705005303" name="ARM Librarian" superClass="com.arm.tool.librarian"/>
+						</toolChain>
+					</folderInfo>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="rfm12b-.null.434326226" name="rfm12b-"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/rfm12b-"/>
+		</configuration>
+	</storageModule>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="com.arm.toolchain.baremetal.1892140817;com.arm.toolchain.baremetal.1892140817.230178247;com.arm.tool.cpp.compiler.1919426545;com.arm.tool.cpp.compiler.input.2007395558">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.arm.eclipse.builder.armcc.ARMCompilerDiscoveryProfile"/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="com.arm.toolchain.baremetal.1892140817;com.arm.toolchain.baremetal.1892140817.230178247;com.arm.tool.cpp.compiler.1919426545;com.arm.tool.c.compiler.input.298616120">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId="com.arm.eclipse.builder.armcc.ARMCompilerDiscoveryProfile"/>
+		</scannerConfigBuildInfo>
+	</storageModule>
+</cproject>

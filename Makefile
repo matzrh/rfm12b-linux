@@ -17,16 +17,19 @@
 # along with rfm12b-linux.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-obj-m += rfm12b.o
+obj-m += rfm12b.o 
+
 
 KVERSION := $(shell uname -r)
 
-# 3.7 moved version.h to a different location
-if [ -f /lib/modules/$(KVERSION)/build/include/generated/uapi/linux/version.h ]; then \
-	INCLUDE += -I/lib/modules/$(KVERSION)/build/include/generated/uapi/
+INCLUDE += -I../../linux-sunxi-cubietruck/include
+
+HOSTCC       = gcc-4.8
+HOSTCXX      = g++-4.8
+
 
 all:
-	make -C /lib/modules/$(KVERSION)/build $(INCLUDE) M=$(PWD) modules
+	make -C ../../linux-sunxi-cubietruck $(INCLUDE) M=$(PWD) modules
 clean:
-	make -C /lib/modules/$(KVERSION)/build $(INCLUDE) M=$(PWD) clean
+	make -C ../../linux-sunxi-cubietruck $(INCLUDE) M=$(PWD) clean
 

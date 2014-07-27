@@ -115,12 +115,28 @@
 */
 #define RFM12B_IOCTL_SET_JEEMODE_AUTOACK  _IOW(RFM12B_SPI_MAJOR, 10, int)
 
+
+/*
+ * Enable or disable (1 or 0) the HOMEEASY protocol for OOK controlled plugs etc.
+ * if enabled, bit value needs to be written to device
+ * reading from device returns an error while this is enabled
+ */
+#ifdef RFM12B_USES_HOMEEASY
+#define RFM12B_IOCTL_SET_HOMEEASY _IOW(RFM12B_SPI_MAJOR, 11, int)
+#define RFM12B_IOCTL_WRITE_HOMEEASY _IOW(RFM12B_SPI_MAJOR, 12, u32)
+
+#endif
+
+
 /*
    Structure for driver statistics (see RFM12B_IOCTL_GET_STATS).
    
    All statistics are tracked since the when the device was opened
    by the current user-space process.
 */
+
+
+
 typedef struct
 {
    unsigned long
@@ -133,6 +149,9 @@ typedef struct
       num_recv_crc16_fail, // failed crc16 check count during receiving
       num_send_underruns,  // send buffer underrun count
       num_send_timeouts,   // timeout count during sending
+#ifdef RFM12B_DEBUG
+      num_irq_raced,
+#endif
       low_battery;         // yes/no if rfm12b Vcc is currently below threshold
 } rfm12b_stats;
 

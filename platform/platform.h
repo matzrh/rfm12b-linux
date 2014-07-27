@@ -32,6 +32,7 @@
 #if !defined(__PLATFORM_H__)
 #define __PLATFORM_H__
 
+
 static int
 platform_module_init(void);
 

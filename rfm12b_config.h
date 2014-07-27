@@ -20,6 +20,8 @@
 #if !defined(__RFM12B_CONFIG_H__)
 #define __RFM12B_CONFIG_H__
 
+#define BUILD_MODULE   1
+
 /*
   The plaform you are building for. This is important, change it to
   whatever board you are using. You can further edit hardware-specific
@@ -35,7 +37,7 @@
   Beaglebone        2               platform/plat_beaglebone.h
   Beaglebone Black  3               platform/plat_beaglebone.h
 */
-#define RFM12B_BOARD        0
+#define RFM12B_BOARD        3
 
 /*
   The name of the driver within the kernel (e.g. shows up in logs, etc...)
@@ -71,7 +73,7 @@
      1 ... 433mhz
      2 ... 868mhz
 */
-#define RFM12B_DEFAULT_BAND_ID   2
+#define RFM12B_DEFAULT_BAND_ID   1
 
 /*
   The default bit rate to use for each RFM12B board. You can change the
@@ -118,6 +120,14 @@
 #define RFM12B_DEFAULT_JEE_AUTOACK  1
 
 /*
+ * to control RF plugs for home automation, the HomeEasy Protocol can be
+ * implemented in OOK mode
+ * comment out if not needed
+ */
+
+//#define RFM12B_USES_HOMEEASY
+
+/*
   SPI settings that the driver will use. You shouldn't need to change
   anything, though you can experiment with higher SPI frequencies -
   however, note that the RFM12b's datasheet mentions that 2.5MHz is
@@ -127,7 +137,6 @@
 #define RFM12B_SPI_MAX_HZ    2500000
 #define RFM12B_SPI_MODE      0
 #define RFM12B_SPI_BITS      8
-
 /*
   The major and number of minors for registering the rfm12 SPI driver.
   You shouldn't need to change this, unless you get an error trying to
@@ -145,7 +154,7 @@
   enough) or if you don't supply bits to be sent fast enough, respectively.
   
   However, I'm not sure if I understand those fields correctly, as disregarding
-  them seems to improve reliability a lot – I need to investigate this further.
+  them seems to improve reliability a lot ��� I need to investigate this further.
   Thus, you can enable/disable the behavior to regard a send/recv as failed
   when these bits are set in the status register.
   
@@ -174,11 +183,12 @@
 #if RFM12B_BOARD==1
 #include "platform/plat_raspberrypi.h"
 
-#elif RFM12B_BOARD==2 || RFM12B_BOARD==3
+#elif RFM12B_BOARD==2
 #include "platform/plat_beaglebone.h"
+#else
+#include "platform/plat_spi.h"
 #endif
 
-#include "platform/plat_spi.h"
 #endif // BUILD_MODULE
 
 #if RFM12B_BOARD==1

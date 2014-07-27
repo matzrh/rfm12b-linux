@@ -1,0 +1,200 @@
+[  100.744212] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  100.920372] rfm12b: sending stuck in state 7.
+[  100.931862] rfm12b: send generic: no. 3, first 0
+[  100.941283] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  100.957890] rfm12b: send generic: no. 1, first 0
+[  100.964704] rfm12bin interrupt 3
+[  100.978830] rfm12b: send generic: no. 1, first 0
+[  100.988050] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  101.003700] rfm12b: turn stuff on...
+[  101.014733] rfm12b: send generic: no. 2, first 33293
+[  101.022600] rfm12b: done with try send...
+[  101.039173] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  101.054060] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  101.230367] rfm12b: sending stuck in state 7.
+[  101.241869] rfm12b: send generic: no. 3, first 0
+[  101.251258] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  101.267899] rfm12b: send generic: no. 1, first 0
+[  101.274890] rfm12bin interrupt 3
+[  101.288999] rfm12b: send generic: no. 1, first 0
+[  101.298229] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  101.313852] rfm12b: turn stuff on...
+[  101.324867] rfm12b: send generic: no. 2, first 33293
+[  101.332732] rfm12b: done with try send...
+[  101.349456] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  101.364341] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  101.550361] rfm12b: sending stuck in state 7.
+[  101.561831] rfm12b: send generic: no. 3, first 0
+[  101.571229] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  101.587838] rfm12b: send generic: no. 1, first 0
+[  101.595553] rfm12bin interrupt 3
+[  101.609714] rfm12b: send generic: no. 1, first 0
+[  101.618988] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  101.634612] rfm12b: turn stuff on...
+[  101.645628] rfm12b: send generic: no. 2, first 33293
+[  101.653496] rfm12b: done with try send...
+[  101.670034] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  101.689870] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  101.880370] rfm12b: sending stuck in state 7.
+[  101.891886] rfm12b: send generic: no. 3, first 0
+[  101.901310] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  101.917944] rfm12b: send generic: no. 1, first 0
+[  101.924786] rfm12bin interrupt 3
+[  101.938884] rfm12b: send generic: no. 1, first 0
+[  101.948163] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  101.963757] rfm12b: turn stuff on...
+[  101.974771] rfm12b: send generic: no. 2, first 33293
+[  101.982639] rfm12b: done with try send...
+[  102.004194] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.019021] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.190378] rfm12b: sending stuck in state 7.
+[  102.201893] rfm12b: send generic: no. 3, first 0
+[  102.211323] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  102.227941] rfm12b: send generic: no. 1, first 0
+[  102.234794] rfm12bin interrupt 3
+[  102.248898] rfm12b: send generic: no. 1, first 0
+[  102.258156] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  102.273796] rfm12b: turn stuff on...
+[  102.284823] rfm12b: send generic: no. 2, first 33293
+[  102.292693] rfm12b: done with try send...
+[  102.314259] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.329097] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.500374] rfm12b: sending stuck in state 7.
+[  102.511872] rfm12b: send generic: no. 3, first 0
+[  102.521293] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  102.537934] rfm12b: send generic: no. 1, first 0
+[  102.544860] rfm12bin interrupt 3
+[  102.558940] rfm12b: send generic: no. 1, first 0
+[  102.568164] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  102.583786] rfm12b: turn stuff on...
+[  102.594801] rfm12b: send generic: no. 2, first 33293
+[  102.602667] rfm12b: done with try send...
+[  102.624757] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.639659] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.810379] rfm12b: sending stuck in state 7.
+[  102.821892] rfm12b: send generic: no. 3, first 0
+[  102.831324] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  102.847970] rfm12b: send generic: no. 1, first 0
+[  102.854803] rfm12bin interrupt 3
+[  102.868906] rfm12b: send generic: no. 1, first 0
+[  102.878129] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  102.893744] rfm12b: turn stuff on...
+[  102.904757] rfm12b: send generic: no. 2, first 33293
+[  102.912622] rfm12b: done with try send...
+[  102.934196] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  102.949081] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  103.120361] rfm12b: sending stuck in state 7.
+[  103.131873] rfm12b: send generic: no. 3, first 0
+[  103.139842] rfm12b: send generic: no. 1, first 0
+[  103.153107] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  103.156859] rfm12b: send generic: no. 2, first 45056
+[  103.159069] rfm12bin interrupt 4
+[  103.162531] rfm12b: send generic: no. 2, first 0
+[  103.200548] rfm12b: in rfm12_trysend_completion_handler S:4 
+[  103.203085] rfm12b: turn stuff on...
+[  103.207003] rfm12b: send generic: no. 2, first 33293
+[  103.209987] rfm12b: done with try send...
+[  103.224269] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  103.245383] rfm12b: in rfm12_recv_spi_completion_handler S:7
+[  103.247603] rfm12bin interrupt 7
+[  103.249816] rfm12b: writing b8aa
+[  103.259201] rfm12b: send generic: no. 2, first 0
+[  103.278691] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  103.308340] rfm12b: in rfm12_send_spi_completion_handler S:7
+[  103.319973] rfm12bin interrupt 7
+[  103.329084] rfm12b: writing b8aa
+[  103.339424] rfm12b: send generic: no. 2, first 0
+[  103.348916] rfm12b: in rfm12_send_spi_completion_handler S:7
+[  103.364412] rfm12bin interrupt 7
+[  103.373534] rfm12b: writing b8aa
+[  103.383786] rfm12b: send generic: no. 2, first 0
+[  103.393072] rfm12b: in rfm12_send_spi_completion_handler S:7
+[  103.408326] rfm12bin interrupt 7
+[  103.417427] rfm12b: writing b8aa
+[  103.427674] rfm12b: send generic: no. 2, first 0
+[  103.437091] rfm12b: in rfm12_send_spi_completion_handler S:7
+[  103.452448] rfm12bin interrupt 7
+[  103.461481] rfm12b: writing b8aa
+[  103.471741] rfm12b: send generic: no. 2, first 0
+[  103.479653] rfm12b: sending stuck in state 7.
+[  103.484264] rfm12b: in rfm12_send_spi_completion_handler S:7
+[  103.508534] rfm12b: send generic: no. 3, first 0
+[  103.515275] rfm12bin interrupt 3
+[  103.529222] rfm12b: send generic: no. 1, first 0
+[  103.538576] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  103.555040] rfm12b: send generic: no. 1, first 0
+[  103.566930] rfm12bin interrupt 3
+[  103.580850] rfm12b: send generic: no. 1, first 0
+[  103.590425] rfm12b: in rfm12_generic_completion_handler S:3, F:0
+[  103.608416] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  103.620260] rfm12b: turn stuff on...
+[  103.631177] rfm12b: send generic: no. 2, first 33293
+[  103.639046] rfm12b: done with try send...
+[  103.655459] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  103.670272] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  103.865355] rfm12b: sending stuck in state 7.
+[  103.876792] rfm12b: send generic: no. 3, first 0
+[  103.886210] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  103.902746] rfm12b: send generic: no. 1, first 0
+[  103.909568] rfm12bin interrupt 3
+[  103.923564] rfm12b: send generic: no. 1, first 0
+[  103.932787] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  103.948299] rfm12b: turn stuff on...
+[  103.959197] rfm12b: send generic: no. 2, first 33293
+[  103.967065] rfm12b: done with try send...
+[  103.983432] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  103.998216] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  104.180371] rfm12b: sending stuck in state 7.
+[  104.191785] rfm12b: send generic: no. 3, first 0
+[  104.201251] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  104.217714] rfm12b: send generic: no. 1, first 0
+[  104.224652] rfm12bin interrupt 3
+[  104.238673] rfm12b: send generic: no. 1, first 0
+[  104.247915] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  104.263472] rfm12b: turn stuff on...
+[  104.274423] rfm12b: send generic: no. 2, first 33293
+[  104.282291] rfm12b: done with try send...
+[  104.298682] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  104.313494] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  104.490362] rfm12b: sending stuck in state 7.
+[  104.501832] rfm12b: send generic: no. 3, first 0
+[  104.511331] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  104.527903] rfm12b: send generic: no. 1, first 0
+[  104.534755] rfm12bin interrupt 3
+[  104.548905] rfm12b: send generic: no. 1, first 0
+[  104.558161] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  104.573812] rfm12b: turn stuff on...
+[  104.584782] rfm12b: send generic: no. 2, first 33293
+[  104.592647] rfm12b: done with try send...
+[  104.609229] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  104.624062] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  104.800361] rfm12b: sending stuck in state 7.
+[  104.811834] rfm12b: send generic: no. 3, first 0
+[  104.821250] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  104.837838] rfm12b: send generic: no. 1, first 0
+[  104.844661] rfm12bin interrupt 3
+[  104.858755] rfm12b: send generic: no. 1, first 0
+[  104.867989] rfm12b: in rfm12_trysend_completion_handler S:3 
+[  104.883615] rfm12b: turn stuff on...
+[  104.894644] rfm12b: send generic: no. 2, first 33293
+[  104.902512] rfm12b: done with try send...
+[  104.919101] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  104.933940] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  105.110362] rfm12b: sending stuck in state 7.
+[  105.121846] rfm12b: send generic: no. 3, first 0
+[  105.131226] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  105.147892] rfm12b: send generic: no. 1, first 0
+[  105.156218] rfm12b: send generic: no. 2, first 45056
+[  105.167103] rfm12bin interrupt 4
+[  105.181220] rfm12b: send generic: no. 2, first 0
+[  105.190574] rfm12b: in rfm12_trysend_completion_handler S:4 
+[  105.206189] rfm12b: turn stuff on...
+[  105.217160] rfm12b: send generic: no. 2, first 33293
+[  105.225028] rfm12b: done with try send...
+[  105.242106] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  105.257632] rfm12b: in rfm12_recv_spi_completion_handler S:7
+[  105.273316] rfm12b: in rfm12_generic_completion_handler S:7, F:0
+[  105.430369] rfm12b: sending stuck in state 7.
+[  105.441900] rfm12b: send generic: no. 3, first 0
+[  105.451354] rfm12b: in rfm12_finish_send_or_recv_callback S:3
+[  105.468447] rfm12b: send generic: no. 1, first 33285
