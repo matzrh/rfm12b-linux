@@ -37,6 +37,8 @@ __attribute__((section("__versions"))) = {
 	{ 0x311b7963, "_raw_spin_unlock" },
 	{ 0xc2161e33, "_raw_spin_lock" },
 	{ 0x1ff8c39c, "spi_async" },
+	{ 0x9e7d6bd0, "__udelay" },
+	{ 0xeae3dfd6, "__const_udelay" },
 	{ 0x8834396c, "mod_timer" },
 	{ 0xbe2c0274, "add_timer" },
 	{ 0x7d11c268, "jiffies" },
@@ -94,4 +96,4 @@ __attribute__((section(".modinfo"))) =
 "depends=";
 
 
-MODULE_INFO(srcversion, "44E3FF52709BD5C1B7852E1");
+MODULE_INFO(srcversion, "BCE731B212A1E1AFA09C5ED");

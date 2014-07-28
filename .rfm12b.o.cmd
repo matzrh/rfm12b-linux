@@ -654,6 +654,7 @@ deps_/Volumes/linux-sunxi-kernel/other_stuff/rfm12b-linux/rfm12b.o := \
   /Volumes/linux-sunxi-kernel/linux-sunxi-cubietruck/arch/arm/include/asm/hw_irq.h \
   /Volumes/linux-sunxi-kernel/other_stuff/rfm12b-linux/rfm12b_ioctl.h \
   /Volumes/linux-sunxi-kernel/other_stuff/rfm12b-linux/rfm12b_jeenode.h \
+  /Volumes/linux-sunxi-kernel/other_stuff/rfm12b-linux/rfm12b_homeeasy.h \
 
 /Volumes/linux-sunxi-kernel/other_stuff/rfm12b-linux/rfm12b.o: $(deps_/Volumes/linux-sunxi-kernel/other_stuff/rfm12b-linux/rfm12b.o)
 

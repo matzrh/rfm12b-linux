@@ -1417,7 +1417,7 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
           rfm12->homeeasy_active = (homeeasy ? 1 : 0);
           rfm12_he_setup(rfm12);
-
+          break;
       }
       
       case RFM12B_IOCTL_WRITE_HOMEEASY: {
@@ -1426,7 +1426,8 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
           if (0 != copy_from_user(&command, (u32*)arg, sizeof(command)))
                 return -EACCES;
 
-          rfm12_he_write(rfm12,command);
+          return(rfm12_he_write(rfm12,command));
+          break;
       }
 #endif
 

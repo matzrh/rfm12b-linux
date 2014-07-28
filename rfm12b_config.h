@@ -125,7 +125,7 @@
  * comment out if not needed
  */
 
-//#define RFM12B_USES_HOMEEASY
+#define RFM12B_USES_HOMEEASY
 
 /*
   SPI settings that the driver will use. You shouldn't need to change

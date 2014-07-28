@@ -20,6 +20,7 @@
 #if !defined(__RFM12B_IOCTL_H__)
 #define __RFM12B_IOCTL_H__
 #include <linux/ioctl.h>
+//#include <stdint.h>
 #include "rfm12b_config.h"
 
 /*
@@ -123,7 +124,7 @@
  */
 #ifdef RFM12B_USES_HOMEEASY
 #define RFM12B_IOCTL_SET_HOMEEASY _IOW(RFM12B_SPI_MAJOR, 11, int)
-#define RFM12B_IOCTL_WRITE_HOMEEASY _IOW(RFM12B_SPI_MAJOR, 12, u32)
+#define RFM12B_IOCTL_WRITE_HOMEEASY _IOW(RFM12B_SPI_MAJOR, 12, uint32_t)
 
 #endif
 
