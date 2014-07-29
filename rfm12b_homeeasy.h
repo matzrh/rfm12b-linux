@@ -17,7 +17,7 @@
 // define constants for protocol in usec
 #define MSG_BREAK		9900
 #define PREAMBLE_STROBE	2650
-#define XMIT_ON_TIME	275
+#define XMIT_ON_TIME	235
 #define BIT_ON			1180
 #define	BIT_OFF			275
 
@@ -37,7 +37,8 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 
 	if(rfm12->homeeasy_active)
 	{
-	   struct spi_transfer tr, tr2, tr3;
+	   struct spi_transfer tr, tr2, tr3, tr4, tr5, tr6, tr7, tr8, tr9, tr10,
+	   	   tr11, tr12, tr13;
 	   struct spi_message msg;
 	   u8 tx_buf[26];
 
@@ -73,21 +74,65 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 
 	   msleep(OPEN_WAIT_MILLIS);
 
-	   // Assumed to have been configure before
-	   spi_message_init(&msg);
+	   // ok, we're now ready to be configured.
+	    spi_message_init(&msg);
 
-	   tr = rfm12_make_spi_transfer(0x80C7 |
-	         ((rfm12->band_id & 0xff) << 4), tx_buf+0, NULL);
-	   tr.cs_change = 1;
-	   spi_message_add_tail(&tr, &msg);
-	   // change to A620 for OOK
+	    tr = rfm12_make_spi_transfer(0x80C7 |
+	          ((rfm12->band_id & 0xff) << 4), tx_buf+0, NULL);
+	    tr.cs_change = 1;
+	    spi_message_add_tail(&tr, &msg);
+	    // change to A620 for OOK
 
-	   tr2 = rfm12_make_spi_transfer(0xA620, tx_buf+2, NULL);
-	   tr2.cs_change = 1;
-	   spi_message_add_tail(&tr2, &msg);
+	    tr2 = rfm12_make_spi_transfer(0xA640, tx_buf+2, NULL);
+	    tr2.cs_change = 1;
+	    spi_message_add_tail(&tr2, &msg);
+
+	    tr3 = rfm12_make_spi_transfer(0xC600 | rfm12->bit_rate, tx_buf+4, NULL);
+	    tr3.cs_change = 1;
+	    spi_message_add_tail(&tr3, &msg);
+
+	    tr4 = rfm12_make_spi_transfer(0x94A2, tx_buf+6, NULL);
+	    tr4.cs_change = 1;
+	    spi_message_add_tail(&tr4, &msg);
+
+	    tr5 = rfm12_make_spi_transfer(0xC2AC, tx_buf+8, NULL);
+	    tr5.cs_change = 1;
+	    spi_message_add_tail(&tr5, &msg);
+
+	    tr6 = rfm12_make_spi_transfer(0xCA8B, tx_buf+10, NULL);
+	    tr6.cs_change = 1;
+	    spi_message_add_tail(&tr6, &msg);
+
+	    tr7 = rfm12_make_spi_transfer(0xCE2D, tx_buf+12, NULL);
+	    tr7.cs_change = 1;
+	    spi_message_add_tail(&tr7, &msg);
 
 
-	   err = spi_sync(rfm12->spi, &msg);
+	    tr8 = rfm12_make_spi_transfer(0xC483, tx_buf+14, NULL);
+	    tr8.cs_change = 1;
+	    spi_message_add_tail(&tr8, &msg);
+
+	    tr9 = rfm12_make_spi_transfer(0x9850, tx_buf+16, NULL);
+	    tr9.cs_change = 1;
+	    spi_message_add_tail(&tr9, &msg);
+
+	    tr10 = rfm12_make_spi_transfer(0xCC77, tx_buf+18, NULL);
+	    tr10.cs_change = 1;
+	    spi_message_add_tail(&tr10, &msg);
+
+	    tr11 = rfm12_make_spi_transfer(0xE000, tx_buf+20, NULL);
+	    tr11.cs_change = 1;
+	    spi_message_add_tail(&tr11, &msg);
+
+	    tr12 = rfm12_make_spi_transfer(0xC800, tx_buf+22, NULL);
+	    tr12.cs_change = 1;
+	    spi_message_add_tail(&tr12, &msg);
+
+	    // set low battery threshold to 2.9V
+	    tr13 = rfm12_make_spi_transfer(0xC047, tx_buf+24, NULL);
+	    spi_message_add_tail(&tr13, &msg);
+
+	  	   err = spi_sync(rfm12->spi, &msg);
 	   if (err)
     	 goto resetInterrupt;
 
