@@ -15,9 +15,9 @@
 // #define USLEEP_AUTORANGE(u) 	(u)-(u)/20,(u)+(u)/20
 
 // define constants for protocol in usec
-#define MSG_BREAK		9900
+#define MSG_BREAK		10000
 #define PREAMBLE_STROBE	2650
-#define XMIT_ON_TIME	235
+#define XMIT_ON_TIME	275
 #define BIT_ON			1180
 #define	BIT_OFF			275
 
@@ -83,7 +83,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 	    spi_message_add_tail(&tr, &msg);
 	    // change to A620 for OOK
 
-	    tr2 = rfm12_make_spi_transfer(0xA640, tx_buf+2, NULL);
+	    tr2 = rfm12_make_spi_transfer(0xA620, tx_buf+2, NULL);
 	    tr2.cs_change = 1;
 	    spi_message_add_tail(&tr2, &msg);
 
@@ -129,7 +129,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 	    spi_message_add_tail(&tr12, &msg);
 
 	    // set low battery threshold to 2.9V
-	    tr13 = rfm12_make_spi_transfer(0xC047, tx_buf+24, NULL);
+	    tr13 = rfm12_make_spi_transfer(0xC049, tx_buf+24, NULL);
 	    spi_message_add_tail(&tr13, &msg);
 
 	  	   err = spi_sync(rfm12->spi, &msg);
@@ -250,7 +250,7 @@ rfm12_msg_debug(struct spi_message *msg){
 */
 
 #define	TX_OOK_BYTES 32
-#define TX_OOK_NO    (TX_OOK_BYTES * 4 + 2)
+#define TX_OOK_NO    ((TX_OOK_BYTES +1) * 4)
 
 static int
 rfm12_he_write(struct rfm12_data* rfm12, u32 command)
@@ -307,6 +307,8 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command)
 //			printk(KERN_INFO RFM12B_DRV_NAME " : bit %2d _b_ pointer pos: %4d\n", bit, (int) (ret_tr-tr));
 		}
 	} while(bit--);
+	// add one on off cycle at end
+	ret_tr=rfm12_ook_transfer(rfm12, XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BYTES)+2], tx_buf);
 //	rfm12_msg_debug(&msg);
 
 	// now send it 5 times with MSG_BREAK delay in between
@@ -315,7 +317,7 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command)
 		err = spi_sync(rfm12->spi, &msg);
 		if(err)
 			return err;
-		rfm12_safe_udelay(MSG_BREAK);
+		rfm12_safe_udelay(MSG_BREAK-BIT_OFF);
 	}
 
 	// put into sleep mode when done

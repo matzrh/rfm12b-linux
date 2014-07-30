@@ -134,7 +134,7 @@
   the highest freq. for receiving, so experiment at your own risk!
 */
 
-#define RFM12B_SPI_MAX_HZ    2500000
+#define RFM12B_SPI_MAX_HZ    1250000
 #define RFM12B_SPI_MODE      0
 #define RFM12B_SPI_BITS      8
 /*
