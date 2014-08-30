@@ -1,1 +1,10 @@
-test/rf12_read/rf12_read
+.*
+!/.gitignore
+*.o
+*.ko
+*.mod.*
+*.cmd
+output
+Module.*
+modules.*
+radio_test_out

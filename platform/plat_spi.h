@@ -45,6 +45,7 @@ struct spi_rfm12_active_board {
    struct irq_chip* irqchip;
    struct irq_data* irqchip_data;
    struct spi_device* spi_device;
+   struct tasklet_struct* rfm12_do_interrupt;
    int idx;
    struct {
       u8 gpio_claimed:1;
@@ -62,6 +63,9 @@ struct spi_rfm12_board_config board_configs[NUM_RFM12_BOARDS] = {
 };
 
 static struct spi_rfm12_active_board active_boards[NUM_RFM12_BOARDS];
+
+
+
 
 
 static int
@@ -82,6 +86,14 @@ spi_rfm12_register_spi_devices(void);  //pinmux handled by fex files
 static int
 spi_rfm12_deregister_spi_devices(void);
 
+static void
+spi_rfm12_schedule_interrupt(unsigned long arg)
+{
+	struct spi_rfm12_active_board* brd = (struct spi_rfm12_active_board*) arg;
+	// printk(KERN_INFO RFM12B_DRV_NAME " : interrupt scheduled for board %d\n",brd->idx);
+	rfm12_handle_interrupt((struct rfm12_data*) brd->irq_data);
+}
+
 static irqreturn_t
 spi_rfm12_irq_handler(int irq, void* dev_id)
 {
@@ -91,8 +103,9 @@ spi_rfm12_irq_handler(int irq, void* dev_id)
          brd->state.irq_enabled = 0;
          brd->irqchip->irq_mask(brd->irqchip_data);
       }
-      
-      rfm12_handle_interrupt((struct rfm12_data*)brd->irq_data);
+      // printk(KERN_INFO RFM12B_DRV_NAME " : will go into tasklet from IRQ \n");
+      tasklet_schedule(brd->rfm12_do_interrupt);
+      // rfm12_handle_interrupt((struct rfm12_data*)brd->irq_data);
    }
    
    return IRQ_HANDLED;
@@ -105,6 +118,7 @@ platform_irq_direct_call(struct spi_rfm12_active_board* brd)
 	return (0 == brd->gpiochip->get(brd->gpiochip,cfg->irq_pin - brd->gpiochip->base));
 }
 
+
 static int
 platform_irq_handled(void* identifier)
 {
@@ -114,16 +128,21 @@ platform_irq_handled(void* identifier)
    if (0 == brd->state.irq_enabled) {
       while (!platform_irq_direct_call(brd) && --poll_int);
       if (poll_int){
+    	 if (NULL != brd->irq_data) {
+
 #ifdef RFM12_PLAT_DBG
-    	  if(brd->state.irq_enabled)
-	      	  printk(KERN_INFO RFM12B_DRV_NAME " : something strange with irqs...\n");
-    	  else
- 	      	  printk(KERN_INFO RFM12B_DRV_NAME " : straight back into irq handler, %04x\n",poll_int);
+    		  if(brd->state.irq_enabled)
+    			  printk(KERN_INFO RFM12B_DRV_NAME " : something strange with irqs...\n");
+    		  else
+    			  printk(KERN_INFO RFM12B_DRV_NAME " : straight back into irq handler, %04x\n",poll_int);
 #endif
-         brd->no_direct++;
-         if(poll_int < brd->min_poll)
-        	 brd->min_poll=poll_int;
-    	  rfm12_handle_interrupt((struct rfm12_data*)brd->irq_data);
+    		  brd->no_direct++;
+    		  if(poll_int < brd->min_poll)
+    			  brd->min_poll=poll_int;
+    		  tasklet_schedule(brd->rfm12_do_interrupt);
+
+//    	  rfm12_handle_interrupt((struct rfm12_data*)brd->irq_data);
+    	 }
       }
       else {
 #ifdef RFM12_PLAT_DBG
@@ -145,6 +164,21 @@ static int is_right_chip(struct gpio_chip *chip, const void *data)
         return 0;
 }
 
+#ifdef RFM12B_DEBUG
+static int
+spi_rfm12_return_irq_enabled(void *identifier)
+{
+	struct spi_rfm12_active_board* brd = (struct spi_rfm12_active_board*)identifier;
+	return brd->state.irq_enabled;
+}
+
+static int
+spi_rfm12_return_irq_pinstate(void *identifier)
+{
+	struct spi_rfm12_active_board* brd = (struct spi_rfm12_active_board*)identifier;
+	return !platform_irq_direct_call(brd);
+}
+#endif
 
 static int
 spi_rfm12_setup_irq_pins(void)
@@ -249,11 +283,14 @@ static int
 platform_module_init(void)
 {
    int err, i;
+
       
    for (i=0; i<NUM_RFM12_BOARDS; i++) {
       active_boards[i].idx = i;
+      active_boards[i].rfm12_do_interrupt = kmalloc(sizeof(struct tasklet_struct),GFP_KERNEL);
+      tasklet_init(active_boards[i].rfm12_do_interrupt, spi_rfm12_schedule_interrupt, (unsigned long) &active_boards[i]);
    }
-   
+   printk(KERN_INFO RFM12B_DRV_NAME " : tasklets defined\n");
    err = spi_rfm12_init_pinmux_settings();
    if (0 != err) goto muxFailed;
    
@@ -276,10 +313,15 @@ muxFailed:
 static int
 platform_module_cleanup(void)
 {
+	int i;
    (void)spi_rfm12_cleanup_pinmux_settings();
    (void)spi_rfm12_cleanup_irq_pins();
    (void)spi_rfm12_deregister_spi_devices();
-   
+   for (i=0; i<NUM_RFM12_BOARDS; i++) {
+      tasklet_kill(active_boards[i].rfm12_do_interrupt);
+      kfree(active_boards[i].rfm12_do_interrupt);
+   }
+   printk(KERN_INFO RFM12B_DRV_NAME " : tasklets freed\n");
    return 0;
 }
 

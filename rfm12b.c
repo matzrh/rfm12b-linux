@@ -30,8 +30,8 @@
 #include <linux/poll.h>
 #include <linux/spi/spi.h>
 
-// #define RFM12B_DEBUG
-
+//#define RFM12B_DEBUG
+//#define RFM12B_PROT
 
 #include "rfm12b_config.h"
 #if defined(MODULE_BOARD_CONFIGURED)
@@ -93,6 +93,7 @@ struct rfm12_spi_message {
    u8                   pos;
 };
 
+
 struct rfm12_data {
    u16                   irq;
    void*                   irq_identifier;
@@ -111,6 +112,10 @@ struct rfm12_data {
 #endif
 #ifdef RFM12B_USES_HOMEEASY
    u8					homeeasy_active;
+#endif
+#ifdef RFM12B_PROT
+char rfm12b_proto[30];
+u8	prot_len,prot_pos;
 #endif
    rfm12_state_t        state;
    u8                      group_id, band_id, bit_rate, jee_id, jee_autoack;
@@ -176,7 +181,7 @@ MODULE_PARM_DESC(jee_autoack,
 #define READ_FIFO_WAIT           (0)
 #define WRITE_TX_WAIT            (0)
 
-#define RXTX_WATCHDOG_JIFFIES    (HZ/4)
+#define RXTX_WATCHDOG_JIFFIES    (HZ/2)
 #define TRYSEND_RETRY_JIFFIES      (HZ/16)
 
 #define DATA_BUF_SIZE            (512)
@@ -308,9 +313,7 @@ rfm12_generic_spi_completion_handler(void *arg)
      (struct rfm12_spi_message*)arg;
    struct rfm12_data* rfm12 =
      (struct rfm12_data*)spi_msg->context;
-
    spin_lock_irqsave(&rfm12->lock, flags);
-
    __rfm12_generic_spi_completion_handler(arg);
    spin_unlock_irqrestore(&rfm12->lock, flags);
 }
@@ -351,12 +354,12 @@ rfm12_send_generic_async_cmd(struct rfm12_data* rfm12, uint16_t* cmds,
                rfm12_control_spi_transfer(spi_msg, i, cmds[i]);
         }
    } 
-   
+   spi_msg->spi_transfers[i-1].cs_change =1;
+   spi_msg->spi_transfers[i-1].delay_usecs = delay_usecs;
    spi_message_add_tail(&spi_msg->spi_transfers[i-1], &spi_msg->spi_msg);
    err = spi_async(rfm12->spi, &spi_msg->spi_msg);
    if (err)
      __rfm12_generic_spi_completion_handler((void*)spi_msg);
-
    return err;
 }
 
@@ -630,23 +633,40 @@ rfm12_finish_send_or_recv_callback(void *arg)
    struct rfm12_data* rfm12 =
      (struct rfm12_data*)spi_msg->context;
    u8 should_release = 0;
-   
+
    spin_lock_irqsave(&rfm12->lock, flags);
 
    rfm12_spi_completion_common(spi_msg);
   
    if ((should_release = rfm12->should_release)) {
-     spin_unlock_irqrestore(&rfm12->lock, flags);
-     rfm12_release_when_safe(rfm12);
-     spin_lock_irqsave(&rfm12->lock, flags);
+
+	   spin_unlock_irqrestore(&rfm12->lock, flags);
+	   rfm12_release_when_safe(rfm12);
+	   spin_lock_irqsave(&rfm12->lock, flags);
+
    } else {
+#ifdef RFM12B_DEBUG
+
+	    printk(KERN_INFO RFM12B_DRV_NAME " : restart sending/receiving  free msg:%d\n", rfm12->free_spi_msgs);
+#endif
         rfm12_begin_sending_or_receiving(rfm12);
    }
-   
+
    spin_unlock_irqrestore(&rfm12->lock, flags);
-   
+#ifdef RFM12B_DEBUG
+   rfm12->irq_active=0;
+   if (!should_release) {
+	   // interrupt must not be active, otherwise trysend_completion starts transmitter after IRQ is taken care of...
+	   printk(KERN_INFO RFM12B_DRV_NAME " : reactivating IRQ, state: %d, IRQ_PIN: %d\n",
+			   rfm12->state, spi_rfm12_return_irq_pinstate(rfm12->irq_identifier));
+	      platform_irq_handled(rfm12->irq_identifier);
+	      printk(KERN_INFO RFM12B_DRV_NAME " : IRQ%s enabled\n", spi_rfm12_return_irq_enabled(rfm12->irq_identifier) ? "" : " NOT");
+   }
+
+#else
    if (!should_release)
-      platform_irq_handled(rfm12->irq_identifier);
+	      platform_irq_handled(rfm12->irq_identifier);
+#endif
 }
 
 static int
@@ -742,7 +762,12 @@ rfm12_finish_sending(struct rfm12_data* rfm12, int success)
       
       rfm12->pkts_sent++;
       rfm12->bytes_sent += len - RF_EXTRA_LEN;
-      
+#ifdef RFM12B_PROT
+      printk(KERN_INFO RFM12B_DRV_NAME " : len: %d, bytes: ",rfm12->prot_len);
+      for(len=0;len<rfm12->prot_pos;len++)
+    	  printk("%02x,",rfm12->rfm12b_proto[len]);
+      printk("\n");
+#endif
       wake_up_interruptible(&rfm12->wait_write);
    }
    
@@ -829,7 +854,7 @@ rfm12_recv_spi_completion_handler(void *arg)
    
    if (!rfm12->should_release &&
         (!valid_interrupt ||
-        (!packet_finished && (RFM12B_DROP_PACKET_ON_FFOV &&
+        (!packet_finished && (!(RFM12B_DROP_PACKET_ON_FFOV) ||
          !(status & RF_STATUS_BIT_FFOV_RGUR)))))
          platform_irq_handled(rfm12->irq_identifier);
 }
@@ -845,6 +870,9 @@ rfm12_send_spi_completion_handler(void *arg)
      (struct rfm12_data*)spi_msg->context;
 
    spin_lock_irqsave(&rfm12->lock, flags);
+#ifdef RFM12B_DEBUG
+   printk(KERN_INFO RFM12B_DRV_NAME " : send completion state %d",rfm12->state);
+#endif
 
    rfm12_spi_completion_common(spi_msg);
 
@@ -927,10 +955,13 @@ static int
 rfm12_write_tx_byte(struct rfm12_data* rfm12, u8 tx_byte)
 {
    uint16_t cmds[2];
-/*#ifdef RFM12B_DEBUG
+#ifdef RFM12B_DEBUG
    printk(KERN_INFO RFM12B_DRV_NAME " : writing %2x\n",tx_byte);
 #endif
-*/
+#ifdef RFM12B_PROT
+   if(rfm12->prot_pos<30)
+   rfm12->rfm12b_proto[rfm12->prot_pos++]=(char) tx_byte;
+#endif
    cmds[0] = RF_READ_STATUS;
    cmds[1] = RF_TXREG_WRITE | tx_byte;
    return rfm12_send_generic_async_cmd(rfm12, cmds, 2,
@@ -963,8 +994,10 @@ rfm12_trysend_completion_handler(void *arg)
      (struct rfm12_spi_message*)arg; 
    struct rfm12_data* rfm12 =
      (struct rfm12_data*)spi_msg->context;
-
    spin_lock_irqsave(&rfm12->lock, flags);
+#ifdef RFM12B_DEBUG
+   printk(KERN_INFO RFM12B_DRV_NAME " : got lock in %s\n",__func__);
+#endif
 
    rfm12->retry_sending_running = 0;
 
@@ -1009,16 +1042,19 @@ static int
 rfm12_try_sending(struct rfm12_data* rfm12)
 {   
    int retval = 0;
+
    
    if (!rfm12->trysend && NULL != rfm12->out_buf && rfm12->out_cur_end != rfm12->out_buf) {      
       uint16_t cmd = RF_READ_STATUS;
       
+      retval = rfm12->trysend = 1;
       (void)rfm12_send_generic_async_cmd(rfm12, &cmd, 1,
          0, rfm12_trysend_completion_handler, RFM12_STATE_NO_CHANGE);
       
-      retval = rfm12->trysend = 1;
    }
-         
+#ifdef RFM12B_DEBUG
+   printk(KERN_INFO RFM12B_DRV_NAME " : leaving %s, IRQ is %d\n",__func__, spi_rfm12_return_irq_pinstate(rfm12->irq_identifier));
+#endif
    return retval;
 }
 
@@ -1084,9 +1120,9 @@ rfm12_apply_crc16(struct rfm12_data* rfm12, unsigned char* ptr, unsigned len)
 
 // this should only be called from an interrupt context
 static void
-rfm12_handle_interrupt(struct rfm12_data* rfm12)
+rfm12_handle_interrupt(struct rfm12_data *rfm12)
 {
-   spin_lock(&rfm12->lock);
+   spin_lock_bh(&rfm12->lock);
 #ifdef RFM12B_DEBUG
    if(rfm12->irq_active) {
 	   rfm12->irq_raced++;
@@ -1095,12 +1131,16 @@ rfm12_handle_interrupt(struct rfm12_data* rfm12)
    else
 	   rfm12->irq_active=1;
 #endif
+
    switch (rfm12->state) {
      case RFM12_STATE_LISTEN:
      case RFM12_STATE_RECV:
        (void)rfm12_request_fifo_byte(rfm12);
        break;
      case RFM12_STATE_SEND_PRE1:
+#ifdef RFM12B_DEBUG
+    	 printk(KERN_INFO RFM12B_DRV_NAME " : in Interrupt, state PRE1\n");
+#endif
      case RFM12_STATE_SEND_PRE2:
      case RFM12_STATE_SEND_PRE3:
      case RFM12_STATE_SEND_TAIL1:
@@ -1124,14 +1164,22 @@ rfm12_handle_interrupt(struct rfm12_data* rfm12)
         (void)rfm12_write_tx_byte(rfm12, *rfm12->out_buf_pos++);
         break;
      default: {
-       uint16_t cmd = RF_READ_STATUS; 
+         uint16_t cmd = RF_READ_STATUS;
+#ifdef RFM12B_DEBUG
+    	 printk(KERN_INFO RFM12B_DRV_NAME " : in Interrupt, state %d\n",rfm12->state);
+#endif
        (void)rfm12_send_generic_async_cmd(rfm12, &cmd, 1,
           0, NULL, RFM12_STATE_NO_CHANGE);
+       if(rfm12->trysend) {
+    	   spin_unlock_bh(&rfm12->lock);
+    	   platform_irq_handled(rfm12->irq_identifier);
+    	   spin_lock_bh(&rfm12->lock);
+       }
        break;
      }
    }
    
-   spin_unlock(&rfm12->lock);
+   spin_unlock_bh(&rfm12->lock);
 }
 
 /* File Operations ------------------------------------------- */
@@ -1148,10 +1196,13 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
 	   return -EACCES;   // no read for OOK mode
 #endif
 
-   if (rfm12->in_cur_end == rfm12->in_buf)
-     wait_event_interruptible(rfm12->wait_read,
-         (rfm12->in_cur_end > rfm12->in_buf));
-
+   if (rfm12->in_cur_end == rfm12->in_buf) {
+	   if(filp->f_flags & O_NONBLOCK)
+		   return -EAGAIN;
+	   else
+		   wait_event_interruptible(rfm12->wait_read,
+				   (rfm12->in_cur_end > rfm12->in_buf));
+   }
    if (rfm12->in_cur_end <= rfm12->in_buf)
      return 0;
 
@@ -1213,7 +1264,7 @@ size_t count, loff_t *f_pos)
 
    bytes_to_copy =
       (RF_MAX_DATA_LEN+2-offset < count) ? RF_MAX_DATA_LEN+2-offset : count;
-   
+
    if (!CAN_SEND_BYTES_OF_LENGTH(bytes_to_copy))
       wait_event_interruptible(rfm12->wait_write,
          CAN_SEND_BYTES_OF_LENGTH(bytes_to_copy));
@@ -1226,6 +1277,19 @@ size_t count, loff_t *f_pos)
 
    spin_lock_irqsave(&rfm12->lock, flags);
 
+   if(copied != bytes_to_copy)
+	   printk(KERN_INFO RFM12B_DRV_NAME " : could not copy %d bytes\n",bytes_to_copy-copied);
+/*   else {
+	   int i=0;
+	   for(;i<count;i++) {
+		   if(*(rfm12->out_cur_end+offset+i)==72) {
+		   printk(KERN_INFO RFM12B_DRV_NAME " : string: %d,%d,%d,%d\n",
+				   *(rfm12->out_cur_end+offset+i),*(rfm12->out_cur_end+offset+i+1),
+				   *(rfm12->out_cur_end+offset+i+2),*(rfm12->out_cur_end+offset+i+3));
+		   }
+	   }
+   }
+*/
    if (INTERPRETS_JEENODE_PROTOCOL(rfm12)) {
       // header is taken verbatim from userspace, but we'll check (and fix) len
       rfm12->out_cur_end++;      // skip hdr, it's taken from userspace.
@@ -1237,7 +1301,10 @@ size_t count, loff_t *f_pos)
       *rfm12->out_cur_end++ = 0;         // hdr      
       *rfm12->out_cur_end++ = (u8)copied;   // len
    }
-      
+#ifdef RFM12B_PROT
+   rfm12->prot_len=*(rfm12->out_cur_end-1);
+   rfm12->prot_pos=0;
+#endif
    rfm12_apply_crc16(rfm12, rfm12->out_cur_end-2, copied+offset);
 
    rfm12->out_cur_end += copied + offset;
@@ -1294,7 +1361,7 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
          s.num_send_timeouts = rfm12->num_send_timeouts;
          s.low_battery = (0 != (rfm12->last_status & RF_STATUS_BIT_LBAT));
 #ifdef RFM12B_DEBUG
-         // s.num_irq_raced = rfm12->irq_raced;
+         s.num_irq_raced = rfm12->irq_raced;
 #endif
 
 
@@ -1767,6 +1834,7 @@ module_exit(rfm12_cleanup_module);
 MODULE_LICENSE("GPL v2");
 MODULE_AUTHOR("Georg Kaindl <gkaindl --AT-- mac.com>");
 MODULE_DESCRIPTION("kernel driver for the rfm12b digital radio module");
-MODULE_VERSION("0.0.1");
+MODULE_VERSION("0.1.1");
+MODULE_ALIAS("spi:rfm12b");
 
 #endif // defined(MODULE_BOARD_CONFIGURED)

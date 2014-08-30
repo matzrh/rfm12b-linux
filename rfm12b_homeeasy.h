@@ -37,44 +37,44 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 
 	if(rfm12->homeeasy_active)
 	{
-	   struct spi_transfer tr, tr2, tr3, tr4, tr5, tr6, tr7, tr8, tr9, tr10,
+		struct spi_transfer tr, tr2, tr3, tr4, tr5, tr6, tr7, tr8, tr9, tr10,
 	   	   tr11, tr12, tr13;
-	   struct spi_message msg;
-	   u8 tx_buf[26];
+		struct spi_message msg;
+		u8 tx_buf[26];
 
-	   rfm12->state = RFM12_STATE_CONFIG;  // state will be preserved during whole OOK phase
-	   printk(KERN_INFO RFM12B_DRV_NAME " : setting up OOK mode\n");
+		rfm12->state = RFM12_STATE_CONFIG;  // state will be preserved during whole OOK phase
+		// printk(KERN_INFO RFM12B_DRV_NAME " : setting up OOK mode\n");
 
-	   spi_message_init(&msg);
+		spi_message_init(&msg);
 
-	   tr = rfm12_make_spi_transfer(RF_READ_STATUS, tx_buf+0, NULL);
-	   tr.cs_change = 1;
-	   spi_message_add_tail(&tr, &msg);
+		tr = rfm12_make_spi_transfer(RF_READ_STATUS, tx_buf+0, NULL);
+		tr.cs_change = 1;
+		spi_message_add_tail(&tr, &msg);
 
-	   tr2 = rfm12_make_spi_transfer(RF_SLEEP_MODE, tx_buf+2, NULL);
-	   tr2.cs_change = 1;
-	   spi_message_add_tail(&tr2, &msg);
+		tr2 = rfm12_make_spi_transfer(RF_SLEEP_MODE, tx_buf+2, NULL);
+		tr2.cs_change = 1;
+		spi_message_add_tail(&tr2, &msg);
 
-	   tr3 = rfm12_make_spi_transfer(RF_TXREG_WRITE, tx_buf+4, NULL);
-	   spi_message_add_tail(&tr3, &msg);
+		tr3 = rfm12_make_spi_transfer(RF_TXREG_WRITE, tx_buf+4, NULL);
+		spi_message_add_tail(&tr3, &msg);
 
-	   err = spi_sync(rfm12->spi, &msg);
+		err = spi_sync(rfm12->spi, &msg);
 
 
-	   if (err)
-	     goto pError;
+		if (err)
+			goto pError;
 
-	   brd = platform_irq_identifier_for_spi_device(rfm12->spi->master->bus_num,rfm12->spi->chip_select);
-	   if(!brd) {
-		   printk(KERN_INFO RFM12B_DRV_NAME " : no board found for bus_num:%d, chipselect:%d\n",
+		brd = platform_irq_identifier_for_spi_device(rfm12->spi->master->bus_num,rfm12->spi->chip_select);
+		if(!brd) {
+			printk(KERN_INFO RFM12B_DRV_NAME " : no board found for bus_num:%d, chipselect:%d\n",
 				   rfm12->spi->master->bus_num, rfm12->spi->chip_select);
-		   goto pError;
-	   }
-	   brd->irqchip->irq_mask(brd->irqchip_data);  // disable interrupts
+			goto pError;
+		}
+		brd->irqchip->irq_mask(brd->irqchip_data);  // disable interrupts
 
-	   msleep(OPEN_WAIT_MILLIS);
+		msleep(OPEN_WAIT_MILLIS);
 
-	   // ok, we're now ready to be configured.
+		// ok, we're now ready to be configured.
 	    spi_message_init(&msg);
 
 	    tr = rfm12_make_spi_transfer(0x80C7 |
@@ -132,26 +132,25 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 	    tr13 = rfm12_make_spi_transfer(0xC049, tx_buf+24, NULL);
 	    spi_message_add_tail(&tr13, &msg);
 
-	  	   err = spi_sync(rfm12->spi, &msg);
-	   if (err)
-    	 goto resetInterrupt;
+	    err = spi_sync(rfm12->spi, &msg);
+	    if (err)
+	  		 goto resetInterrupt;
+	    spi_message_init(&msg);
 
-	     spi_message_init(&msg);
+	    tr = rfm12_make_spi_transfer(RF_READ_STATUS, tx_buf+0, NULL);
+	    spi_message_add_tail(&tr, &msg);
 
-	     tr = rfm12_make_spi_transfer(RF_READ_STATUS, tx_buf+0, NULL);
-	     spi_message_add_tail(&tr, &msg);
+	    err = spi_sync(rfm12->spi, &msg);
 
-	     err = spi_sync(rfm12->spi, &msg);
+	    if (err)
+	    	goto resetInterrupt;
 
-	   if (err)
-    	 goto resetInterrupt;
+	    printk(KERN_INFO RFM12B_DRV_NAME " : set up successfully\n");
 
-	     printk(KERN_INFO RFM12B_DRV_NAME " : set up successfully\n");
+	    return err;
+	} // end rfm12->homeeasy_active
 
-	   return err;
-	}
-
-	printk(KERN_INFO RFM12B_DRV_NAME " : leaving OOK mode\n");
+	// printk(KERN_INFO RFM12B_DRV_NAME " : leaving OOK mode\n");
 
 	brd = platform_irq_identifier_for_spi_device(rfm12->spi->master->bus_num,rfm12->spi->chip_select);
 	if(!brd)
@@ -164,7 +163,8 @@ resetInterrupt:
 
 
 pError:
-	printk(KERN_INFO RFM12B_DRV_NAME " : leaving OOK mode with errStat: %d",err);
+	// also done when homeeasy_active initially not set (normally leaving ook mode)
+	// printk(KERN_INFO RFM12B_DRV_NAME " : leaving OOK mode with errStat: %d",err);
 	rfm12->state = RFM12_STATE_IDLE;
 	rfm12->homeeasy_active=0;  // in case we got here because of an error
 	rfm12_reset(rfm12);  // reset if turned off or error
@@ -276,7 +276,7 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command)
 	if(err)
 		return err;
 
-	printk(KERN_INFO RFM12B_DRV_NAME " : would now write %04x in OOK mode\n",command);
+	printk(KERN_INFO RFM12B_DRV_NAME " : writing %04x in OOK mode\n",command);
 
 
 	// make the full message with all commands

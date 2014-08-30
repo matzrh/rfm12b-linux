@@ -134,7 +134,7 @@
   the highest freq. for receiving, so experiment at your own risk!
 */
 
-#define RFM12B_SPI_MAX_HZ    1250000
+#define RFM12B_SPI_MAX_HZ    2500000
 #define RFM12B_SPI_MODE      0
 #define RFM12B_SPI_BITS      8
 /*
@@ -163,7 +163,7 @@
   
   Tip: Leave these at defaults, unless you're actively investigating this.
 */
-#define RFM12B_DROP_PACKET_ON_FFOV       1
+#define RFM12B_DROP_PACKET_ON_FFOV       0
 #define RFM12B_RETRY_SEND_ON_RGUR        0
 
 /****************************** DON'T EDIT BELOW **************************/
@@ -195,7 +195,7 @@
 #define RF12_TESTS_DEV      "/dev/" RFM12B_DEV_NAME ".0.1"
 #elif RFM12B_BOARD==2 || RFM12B_BOARD==3
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,8,0)
-#define RF12_TESTS_DEV      "/dev/" RFM12B_DEV_NAME ".2.1"
+#define RF12_TESTS_DEV      "/dev/" RFM12B_DEV_NAME ".2.0"
 #else
 #define RF12_TESTS_DEV      "/dev/" RFM12B_DEV_NAME ".1.1"
 #endif

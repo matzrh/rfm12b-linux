@@ -234,11 +234,11 @@ int main(int argc, char** argv)
                if ((obuf[0] & RFM12B_JEE_HDR_ACK_BIT) && !(obuf[0] & RFM12B_JEE_HDR_CTL_BIT)) {
                   if (obuf[0] & RFM12B_JEE_HDR_DST_BIT) {
                      // if this was only sent to us, an ACK is sent as broadcast
-                     printf(SEND_COLOR "<SENT CTL:1 ACK:0 DST:0 ADDR:%d LEN:0>\n" STOP_COLOR,
+                     printf(SEND_COLOR "<SENT CTL:1 ACK:0 DST:0 ADDR:%d LEN:0>" STOP_COLOR " \n",
                         jee_id);
                   } else {
                      // if this was a broadcast, the ACK is sent directly to the source node.
-                     printf(SEND_COLOR "<SENT CTL:1 ACK:0 DST:1 ADDR:%d LEN:0>\n" STOP_COLOR,
+                     printf(SEND_COLOR "<SENT CTL:1 ACK:0 DST:1 ADDR:%d LEN:0>" STOP_COLOR " \n",
                         RFM12B_JEE_ID_FROM_HDR(obuf[0]));
                   }
                }
