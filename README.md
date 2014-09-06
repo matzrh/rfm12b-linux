@@ -26,7 +26,7 @@ gpio_num = X
 ...
 gpio_pin_X = port:PI14<5><default><default><default>
 ```
-(Replace X with your number of pins and the dots with whatever other GPIO pins you use).  Of course, you can use any other pin that has a EINT Mux Capacity.
+(Replace X with your number of pins and the dots with whatever other GPIO pins you use).  Of course, you can use any other pin than PI14 that has an external interrupt capability (see A20 datasheet and or fex/mux documentations to find out).
 
 ```
 [spi_devices]
@@ -76,7 +76,7 @@ The proper API to access the GPIO and the Interrupt Handlers is being used.
 Furthermore, the interrupt routine is moved to a tasklet. I found this was necessary because:
 - if the interrupt was fired from the rfm12b device quickly, I found the interrupt was missed by the driver.  The LOW-LEVEL interrupt (not CHANGE-LEVEL to LOW) was not interpreted.  So I am polling the pin for a very short time and go into the interrupt directly, when the level is low, instead of unmasking.
 - the rfm12b driver usually unmasks the interrupt in a callback function from the spi driver, after a message transfer is completed. So it may actually enter the interrupt from the callback.
-- this resulted in some cases in a lock up between different places trying to get the same spin-lock.  Putting the interrupt into a different tasklet thread remedied this.
+- this resulted in some cases in a lock up of code trying to get the same spin-lock which would never be freed without entering it.  Putting the interrupt into a different tasklet thread remedied this.
 
 ####spi-sun7i.ko
 Apart from the "hacks" concerning the OOK mode (see below), a few bugs and unclean removal issues were resolved.
