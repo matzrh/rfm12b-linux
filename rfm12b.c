@@ -1484,6 +1484,9 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
           rfm12->homeeasy_active = (homeeasy ? 1 : 0);
           rfm12_he_setup(rfm12);
+          // turn on receiver...
+          if(!homeeasy)
+        	  rfm12_begin_sending_or_receiving(rfm12);
           break;
       }
       
