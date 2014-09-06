@@ -60,13 +60,11 @@ spi_miso = port:PC22<3><default><default><default>
 1. Apply the patch spi-sun7i.patch to your kernel.  If you do not want to compile the kernel, you should probably be able to compile the file spi-sun7i.c standalone as an external kernel module. (provided you have the correct header files)
 2. Compile the module.  The Makefile needs to be changed to your system!  Have a look at the "all:" and "modules_install:" targets.  Change the path to your kernel (../../linux-sunxi-cubietruck) to your kernel source (or headers) and change the INSTALL_MOD_PATH variable
 3. In the Makefile, there is a target headers_install that copies the necessary headers (rfm12b_config.h, ..ioctl.h and ..jeenode.h) into a subdirectory in /usr/include/linux,  you can then reference them with `#include <linux/rfm12b/rfm12b_config.h>` etc.  
-
-3a. The definition "BUILD_MODULE" needs to be unset in the user space header, the sed line in that target does this.
-4. Run a 'depmod' on your board.
-5. if you type "modprobe spi-sun7i", the rfm12b.ko module should be installed automatically, as well, when you set the modalias in your fex file as suggested.  Control with 'dmesg' if both modules are installed and you have no errors, you are good to go.
-6. If you need to remove the module, remove rfm12b first and then spi-sun7i.  Otherwise, I head kernel alarms sometimes.  If you install spi-sun7i, you get an error message in your dmesg log that the chipselect 0 is already in use.  That's fine.
-
-6a. The boardinfo for chipselect 0 is added each time spi-sun7i is installed.  This could only be resolved if the spi base kernel module is removed.  If you have it fixed built into your kernel, it may be a good idea to reboot your board after you have installed and uninstalled spi-sun7i 30 times, but it probably is not even necessary
+4. (The definition "BUILD_MODULE" needs to be unset in the user space header, the sed line in that target does this.)
+5. Run a 'depmod' on your board.
+6. if you type "modprobe spi-sun7i", the rfm12b.ko module should be installed automatically, as well, when you set the modalias in your fex file as suggested.  Control with 'dmesg' if both modules are installed and you have no errors, you are good to go.
+7. If you need to remove the module, remove rfm12b first and then spi-sun7i.  Otherwise, I head kernel alarms sometimes.  If you install spi-sun7i, you get an error message in your dmesg log that the chipselect 0 is already in use.  That's fine.
+8. (The boardinfo for chipselect 0 is added each time spi-sun7i is installed.  This could only be resolved if the spi base kernel module is removed.  If you have it fixed built into your kernel, it may be a good idea to reboot your board after you have installed and uninstalled spi-sun7i 30 times, but it probably is not even necessary)
 
 ## Changed Stuff
 
