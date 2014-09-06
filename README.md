@@ -63,8 +63,8 @@ spi_miso = port:PC22<3><default><default><default>
 3a. The definition "BUILD_MODULE" needs to be unset in the user space header, the sed line in that target does this.
 4. Run a 'depmod' on your board.
 5. if you type "modprobe spi-sun7i", the rfm12b.ko module should be installed automatically, as well, when you set the modalias in your fex file as suggested.  Control with 'dmesg' if both modules are installed and you have no errors, you are good to go.
-6. If you need to remove the module, remove rfm12b first and then spi-sun7i.  Otherwise, I head kernel alarms sometimes.  If you install spi-sun7i, you get an error message in your dmesg log that the boardinfo is already existing.
-6a. The boardinfo is added each time spi-sun7i is installed.  This could only be resolved if the spi base kernel module is removed.  If you have it fixed built into your kernel, it may be a good idea to reboot your board after you have installed and uninstalled spi-sun7i 30 times, but it probably is not necessary
+6. If you need to remove the module, remove rfm12b first and then spi-sun7i.  Otherwise, I head kernel alarms sometimes.  If you install spi-sun7i, you get an error message in your dmesg log that the chipselect 0 is already in use.  That's fine.
+6a. The boardinfo for chipselect 0 is added each time spi-sun7i is installed.  This could only be resolved if the spi base kernel module is removed.  If you have it fixed built into your kernel, it may be a good idea to reboot your board after you have installed and uninstalled spi-sun7i 30 times, but it probably is not even necessary
 
 ## Changed Stuff
 
