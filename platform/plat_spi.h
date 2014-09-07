@@ -427,6 +427,27 @@ platform_irq_init(void* identifier, void* rfm12_data)
 }
 
 static int
+platform_irq_suspend(void* identifier, int resume)
+{
+	int err = 0;
+	struct spi_rfm12_active_board* brd = (struct spi_rfm12_active_board*)identifier;
+
+	if (brd->state.irq_claimed) {
+	   if (brd->state.irq_enabled) {
+		   printk( KERN_INFO RFM12B_DRV_NAME " : will now %smask irq\n", resume? "un":"");
+		   if(resume)
+			   brd->irqchip->irq_unmask(brd->irqchip_data);
+		   else
+			   brd->irqchip->irq_mask(brd->irqchip_data);
+	   }
+	}
+	return err;
+
+
+}
+
+
+static int
 platform_irq_cleanup(void* identifier)
 {
    int err = 0;   

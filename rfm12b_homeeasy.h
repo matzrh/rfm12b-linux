@@ -33,7 +33,6 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 {
 
 	int err=0;  // assume success
-	struct spi_rfm12_active_board* brd;
 
 	if(rfm12->homeeasy_active)
 	{
@@ -64,13 +63,6 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 		if (err)
 			goto pError;
 
-		brd = platform_irq_identifier_for_spi_device(rfm12->spi->master->bus_num,rfm12->spi->chip_select);
-		if(!brd) {
-			printk(KERN_INFO RFM12B_DRV_NAME " : no board found for bus_num:%d, chipselect:%d\n",
-				   rfm12->spi->master->bus_num, rfm12->spi->chip_select);
-			goto pError;
-		}
-		brd->irqchip->irq_mask(brd->irqchip_data);  // disable interrupts
 
 		msleep(OPEN_WAIT_MILLIS);
 
@@ -134,7 +126,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 
 	    err = spi_sync(rfm12->spi, &msg);
 	    if (err)
-	  		 goto resetInterrupt;
+	  		 goto pError;
 	    spi_message_init(&msg);
 
 	    tr = rfm12_make_spi_transfer(RF_READ_STATUS, tx_buf+0, NULL);
@@ -143,7 +135,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 	    err = spi_sync(rfm12->spi, &msg);
 
 	    if (err)
-	    	goto resetInterrupt;
+	    	goto pError;
 
 	    printk(KERN_INFO RFM12B_DRV_NAME " : set up successfully\n");
 
@@ -152,22 +144,13 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 
 	// printk(KERN_INFO RFM12B_DRV_NAME " : leaving OOK mode\n");
 
-	brd = platform_irq_identifier_for_spi_device(rfm12->spi->master->bus_num,rfm12->spi->chip_select);
-	if(!brd)
-		goto pError;
-
-resetInterrupt:
-	if(brd->state.irq_enabled)  // enable interrupt if previously on
-		brd->irqchip->irq_unmask(brd->irqchip_data);
 
 
 
 pError:
 	// also done when homeeasy_active initially not set (normally leaving ook mode)
 	// printk(KERN_INFO RFM12B_DRV_NAME " : leaving OOK mode with errStat: %d",err);
-	rfm12->state = RFM12_STATE_IDLE;
 	rfm12->homeeasy_active=0;  // in case we got here because of an error
-	rfm12_reset(rfm12);  // reset if turned off or error
 	return err;
 
 

@@ -1421,10 +1421,9 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                                              
             if (0 != copy_from_user(&gid, (int*)arg, sizeof(gid)))
                   return -EACCES;
-                           
             rfm12->group_id = gid;
             rfm12_reset(rfm12);
-            
+
             break;
       }
       
@@ -1433,7 +1432,6 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                         
             if (0 != copy_from_user(&bid, (int*)arg, sizeof(bid)))
                   return -EACCES;
-                              
             rfm12->band_id = bid;
             rfm12_reset(rfm12);
             
@@ -1448,7 +1446,7 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
             
             rfm12->bit_rate = br;
             rfm12_reset(rfm12);
-            
+
             break;
       }
       
@@ -1457,7 +1455,7 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
                         
             if (0 != copy_from_user(&ji, (int*)arg, sizeof(ji)))
                   return -EACCES;
-            
+
             rfm12->jee_id = ji;
             rfm12_reset(rfm12);
             
@@ -1472,7 +1470,7 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
         
          rfm12->jee_autoack = (ack ? 1 : 0);
          rfm12_reset(rfm12);
-         
+
          break;
       }
 #ifdef RFM12B_USES_HOMEEASY
@@ -1480,13 +1478,23 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
           int homeeasy;
 
           if (0 != copy_from_user(&homeeasy, (int*)arg, sizeof(homeeasy)))
-                return -EACCES;
+        	  return -EACCES;
+          if (homeeasy == rfm12->homeeasy_active)
+        	  return -EBUSY;
+          if(homeeasy) {
+        	  platform_irq_suspend(rfm12->irq_identifier,0);
+        	  rfm12_update_rxtx_watchdog(rfm12, 1);
+          }
 
           rfm12->homeeasy_active = (homeeasy ? 1 : 0);
-          rfm12_he_setup(rfm12);
-          // turn on receiver...
-          if(!homeeasy)
-        	  rfm12_begin_sending_or_receiving(rfm12);
+          if(rfm12_he_setup(rfm12))
+        	  printk(KERN_INFO RFM12B_DRV_NAME " : error setting up homeeasy\n");
+          if(!rfm12->homeeasy_active) {
+        	  rfm12->state = RFM12_STATE_IDLE;
+        	  rfm12_reset(rfm12);
+        	  platform_irq_suspend(rfm12->irq_identifier,1);
+          }
+
           break;
       }
       
