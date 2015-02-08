@@ -20,6 +20,8 @@
 #define XMIT_ON_TIME	275
 #define BIT_ON			1180
 #define	BIT_OFF			275
+#define SIMPLE_SHORT	960
+#define SIMPLE_LONG		320
 
 
 static int
@@ -43,7 +45,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 
 		rfm12->state = RFM12_STATE_CONFIG;  // state will be preserved during whole OOK phase
 		// printk(KERN_INFO RFM12B_DRV_NAME " : setting up OOK mode\n");
-
+		// rfm12_cancel_idle_watchdog(rfm12);
 		spi_message_init(&msg);
 
 		tr = rfm12_make_spi_transfer(RF_READ_STATUS, tx_buf+0, NULL);
@@ -232,14 +234,16 @@ rfm12_msg_debug(struct spi_message *msg){
 }
 */
 
-#define	TX_OOK_BYTES 32
-#define TX_OOK_NO    ((TX_OOK_BYTES +1) * 4)
+#define	TX_OOK_BITS 32
+#define TX_OOK_NO    ((TX_OOK_BITS +1) * 4)
+#define TX_SIMPLE_OOK_BITS 12
+#define TX_SIMPLE_NO ((TX_SIMPLE_OOK_BITS) * 4 + 2)
 
 static int
-rfm12_he_write(struct rfm12_data* rfm12, u32 command)
+rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 {
 	int messages = 0;
-	int bit = TX_OOK_BYTES - 1;
+	int bit = (simple_flag ? TX_SIMPLE_OOK_BITS : TX_OOK_BITS) - 1;
 	int err = 0;
 	struct spi_transfer* ret_tr;
 	struct spi_transfer* tr;
@@ -270,28 +274,37 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command)
 	tx_buf[2]=(RF_IDLE_MODE & 0xff00) >> 8;
 	tx_buf[3]=RF_IDLE_MODE & 0xff;
 	spi_message_init(&msg);
-
-	ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME,PREAMBLE_STROBE, &msg, tr, tx_buf);
+	if(!simple_flag)
+		ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME,PREAMBLE_STROBE, &msg, tr, tx_buf);
 //	printk(KERN_INFO RFM12B_DRV_NAME " : preamble pointer pos: %d\n", (int) (ret_tr-tr));
 	do
 	{
 		if(command & (1<<bit))
 		{
-			ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_ON, &msg, &tr[4*(TX_OOK_BYTES-bit)-2], tx_buf);
-//			printk(KERN_INFO RFM12B_DRV_NAME " : bit %2d _a_ pointer pos: %4d\n", bit, (int) (ret_tr-tr));
-			ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BYTES-bit)], tx_buf);
-//			printk(KERN_INFO RFM12B_DRV_NAME " : bit %2d _b_ pointer pos: %4d\n", bit, (int) (ret_tr-tr));
+			if(simple_flag) {
+				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_SHORT,SIMPLE_LONG, &msg,  &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 4], tx_buf);
+				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_LONG,SIMPLE_SHORT, &msg, &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 2], tx_buf);
+			} else {
+				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_ON, &msg, &tr[4*(TX_OOK_BITS-bit)-2], tx_buf);
+				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BITS-bit)], tx_buf);
+			}
 		}
 		else
 		{
-			ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BYTES-bit)-2], tx_buf);
-//			printk(KERN_INFO RFM12B_DRV_NAME " : bit %2d _a_ pointer pos: %4d\n", bit, (int) (ret_tr-tr));
-			ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_ON, &msg, &tr[4*(TX_OOK_BYTES-bit)], tx_buf);
-//			printk(KERN_INFO RFM12B_DRV_NAME " : bit %2d _b_ pointer pos: %4d\n", bit, (int) (ret_tr-tr));
+			if(simple_flag) {
+				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_SHORT,SIMPLE_LONG, &msg, &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 4], tx_buf);
+				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_SHORT,SIMPLE_LONG, &msg, &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 2], tx_buf);
+			} else {
+				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BITS-bit)-2], tx_buf);
+				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_ON, &msg, &tr[4*(TX_OOK_BITS-bit)], tx_buf);
+			}
 		}
 	} while(bit--);
 	// add one on off cycle at end
-	ret_tr=rfm12_ook_transfer(rfm12, XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BYTES)+2], tx_buf);
+	if(simple_flag)
+		ret_tr=rfm12_ook_transfer(rfm12, SIMPLE_SHORT, SIMPLE_LONG, &msg, &tr[4*(TX_SIMPLE_OOK_BITS)], tx_buf);
+	else
+		ret_tr=rfm12_ook_transfer(rfm12, XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BITS)+2], tx_buf);
 //	rfm12_msg_debug(&msg);
 
 	// now send it 5 times with MSG_BREAK delay in between

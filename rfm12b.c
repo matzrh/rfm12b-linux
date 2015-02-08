@@ -135,6 +135,8 @@ u8	prot_len,prot_pos;
    u8                   rxtx_watchdog_running;
    struct timer_list       retry_sending_timer;
    u8                      retry_sending_running;
+   struct timer_list	idle_watchdog;
+   u8					idle_watchdog_running;
    wait_queue_head_t       wait_read;
    wait_queue_head_t       wait_write;
 };
@@ -181,7 +183,8 @@ MODULE_PARM_DESC(jee_autoack,
 #define READ_FIFO_WAIT           (0)
 #define WRITE_TX_WAIT            (0)
 
-#define RXTX_WATCHDOG_JIFFIES    (HZ/2)
+#define RXTX_WATCHDOG_JIFFIES    (HZ/4)
+#define	IDLE_WATCHDOG_JIFFIES    (HZ/2)
 #define TRYSEND_RETRY_JIFFIES      (HZ/16)
 
 #define DATA_BUF_SIZE            (512)
@@ -215,6 +218,10 @@ static void
 rfm12_update_rxtx_watchdog(struct rfm12_data* rfm12, u8 cancelTimer);
 static void
 rfm12_apply_crc16(struct rfm12_data* rfm12, unsigned char* ptr, unsigned len);
+static void
+rfm12_idle_watchdog_expired(unsigned long ptr);
+static void
+rfm12_cancel_idle_watchdog(struct rfm12_data* rfm12);
 
 // 3.8 kernels and later make these obsolete due to changes in HOTPLUG
 // we keep them for compatibility with earlier kernel versions...
@@ -327,6 +334,7 @@ rfm12_send_generic_async_cmd(struct rfm12_data* rfm12, uint16_t* cmds,
    int err, i;
    struct rfm12_spi_message* spi_msg;   
 
+   rfm12_cancel_idle_watchdog(rfm12);
    spi_msg = rfm12_claim_spi_message(rfm12);
 
    if (NULL == spi_msg)
@@ -379,6 +387,7 @@ rfm12_crc16_update(u16 crc, u8 b)
    return crc;
 }
 
+
 static int
 rfm12_start_receiving(struct rfm12_data* rfm12)
 {
@@ -387,6 +396,7 @@ rfm12_start_receiving(struct rfm12_data* rfm12)
    
    rfm12->state = RFM12_STATE_LISTEN;
    
+
    // read the fifo before listening to make sure it's empty
    cmd[0] = RF_RX_FIFO_READ;
    cmd[1] = RF_RECEIVER_ON;
@@ -395,10 +405,50 @@ rfm12_start_receiving(struct rfm12_data* rfm12)
      NULL, RFM12_STATE_NO_CHANGE);
    if (0 == err) {
      rfm12->in_cur_num_bytes = 0;
+     // call do this once in while again
+#ifdef RFM12B_DEBUG
+     printk(KERN_INFO RFM12B_DRV_NAME "setting idle watchdog, spin_lock:%d, running?:%d\n",spin_is_locked(&rfm12->lock), rfm12->idle_watchdog_running);
+#endif
+     init_timer(&rfm12->idle_watchdog);
+     rfm12->idle_watchdog.data=(unsigned long) rfm12;
+     rfm12->idle_watchdog.function=rfm12_idle_watchdog_expired;
+     rfm12->idle_watchdog.expires= jiffies + IDLE_WATCHDOG_JIFFIES;
+     add_timer(&rfm12->idle_watchdog);
+     rfm12->idle_watchdog_running =1;
+
    }
 
    return err;
 }
+
+static void rfm12_cancel_idle_watchdog(struct rfm12_data* rfm12){
+	if(rfm12->idle_watchdog_running==1) {
+		del_timer(&rfm12->idle_watchdog);
+#ifdef RFM12B_DEBUG
+	    printk(KERN_INFO RFM12B_DRV_NAME "cancel idle watchdog, spin_lock:%d, running?:%d\n",spin_is_locked(&rfm12->lock), rfm12->idle_watchdog_running);
+#endif
+		rfm12->idle_watchdog_running =0;
+	}
+}
+
+/* reset receive mode once in a while */
+
+static void rfm12_idle_watchdog_expired(unsigned long ptr){
+	unsigned long flags;
+	struct rfm12_data* rfm12 = (struct rfm12_data*)ptr;
+
+	spin_lock_irqsave(&rfm12->lock, flags);
+	rfm12->idle_watchdog_running=0;
+#ifdef RFM12B_DEBUG
+    printk(KERN_INFO RFM12B_DRV_NAME "idle timer expired, spin_lock:%d, running?:%d\n",spin_is_locked(&rfm12->lock), rfm12->idle_watchdog_running);
+#endif
+	if ((RFM12_STATE_LISTEN == rfm12->state)) {
+		rfm12_start_receiving(rfm12);
+		// mod_timer(&rfm12->idle_watchdog, jiffies+IDLE_WATCHDOG_JIFFIES);
+	}
+	spin_unlock_irqrestore(&rfm12->lock, flags);
+}
+
 
 static int
 rfm12_setup(struct rfm12_data* rfm12)
@@ -408,6 +458,8 @@ rfm12_setup(struct rfm12_data* rfm12)
    struct spi_message msg;
    u8 tx_buf[26];
    int err;
+
+   rfm12_cancel_idle_watchdog(rfm12);
 
    rfm12->state = RFM12_STATE_CONFIG;
 
@@ -727,7 +779,8 @@ rfm12_finish_receiving(struct rfm12_data* rfm12, int skip_packet)
        }
        
        rfm12->in_cur_end = rfm12->in_buf_pos;
-       
+       printk(KERN_INFO RFM12B_DRV_NAME " : successful read \n");
+
        wake_up_interruptible(&rfm12->wait_read);
      } else {
        if (0 == skip_packet && 0 != rfm12->crc16)
@@ -768,6 +821,7 @@ rfm12_finish_sending(struct rfm12_data* rfm12, int success)
     	  printk("%02x,",rfm12->rfm12b_proto[len]);
       printk("\n");
 #endif
+      printk(KERN_INFO RFM12B_DRV_NAME " : successful write \n");
       wake_up_interruptible(&rfm12->wait_write);
    }
    
@@ -1197,11 +1251,13 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
 #endif
 
    if (rfm12->in_cur_end == rfm12->in_buf) {
+	   // printk(KERN_INFO RFM12B_DRV_NAME "nothing to read, end_in:%d, in_pos:%d",rfm12->in_cur_end, rfm12->in_buf);
 	   if(filp->f_flags & O_NONBLOCK)
 		   return -EAGAIN;
 	   else
-		   wait_event_interruptible(rfm12->wait_read,
-				   (rfm12->in_cur_end > rfm12->in_buf));
+		   if(wait_event_interruptible(rfm12->wait_read,
+				   (rfm12->in_cur_end > rfm12->in_buf)))
+			   return -ERESTART;
    }
    if (rfm12->in_cur_end <= rfm12->in_buf)
      return 0;
@@ -1345,7 +1401,7 @@ static long
 rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
    struct rfm12_data* rfm12 = (struct rfm12_data*)filp->private_data;
-   
+
    switch (cmd) {
       case RFM12B_IOCTL_GET_STATS: {
          rfm12b_stats s;
@@ -1482,7 +1538,9 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
           if (homeeasy == rfm12->homeeasy_active)
         	  return -EBUSY;
           if(homeeasy) {
+
         	  platform_irq_suspend(rfm12->irq_identifier,0);
+        	  rfm12_cancel_idle_watchdog(rfm12);
         	  rfm12_update_rxtx_watchdog(rfm12, 1);
           }
 
@@ -1504,8 +1562,18 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
           if (0 != copy_from_user(&command, (u32*)arg, sizeof(command)))
                 return -EACCES;
 
-          return(rfm12_he_write(rfm12,command));
+          return(rfm12_he_write(rfm12,command,0));
           break;
+      }
+
+      case RFM12B_IOCTL_WRITE_HOMEEASY_SIMPLE: {
+    	  u16 command;
+
+    	  if(0 != copy_from_user(&command, (u16*) arg, sizeof(command)))
+    		  return -EACCES;
+
+    	  return(rfm12_he_write(rfm12,(u32) command,1));
+    	  break;
       }
 #endif
 
