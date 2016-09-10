@@ -779,7 +779,7 @@ rfm12_finish_receiving(struct rfm12_data* rfm12, int skip_packet)
        }
        
        rfm12->in_cur_end = rfm12->in_buf_pos;
-       printk(KERN_INFO RFM12B_DRV_NAME " : successful read \n");
+//       printk(KERN_INFO RFM12B_DRV_NAME " : successful read \n");
 
        wake_up_interruptible(&rfm12->wait_read);
      } else {
@@ -821,7 +821,7 @@ rfm12_finish_sending(struct rfm12_data* rfm12, int success)
     	  printk("%02x,",rfm12->rfm12b_proto[len]);
       printk("\n");
 #endif
-      printk(KERN_INFO RFM12B_DRV_NAME " : successful write \n");
+//      printk(KERN_INFO RFM12B_DRV_NAME " : successful write \n");
       wake_up_interruptible(&rfm12->wait_write);
    }
    
@@ -1251,13 +1251,13 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
 #endif
 
    if (rfm12->in_cur_end == rfm12->in_buf) {
-	   // printk(KERN_INFO RFM12B_DRV_NAME "nothing to read, end_in:%d, in_pos:%d",rfm12->in_cur_end, rfm12->in_buf);
+//	   printk(KERN_INFO RFM12B_DRV_NAME "nothing to read, end_in:%d\n",rfm12->in_cur_end - rfm12->in_buf);
 	   if(filp->f_flags & O_NONBLOCK)
 		   return -EAGAIN;
 	   else
 		   if(wait_event_interruptible(rfm12->wait_read,
 				   (rfm12->in_cur_end > rfm12->in_buf)))
-			   return -ERESTART;
+			   return -ERESTARTSYS;
    }
    if (rfm12->in_cur_end <= rfm12->in_buf)
      return 0;
@@ -1265,6 +1265,7 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
    spin_lock_irqsave(&rfm12->lock, flags);
 
    length = *(rfm12->in_buf + 1) + 2;
+   // printk(KERN_INFO RFM12B_DRV_NAME "now something to read, end in: %d, length=%d\n",rfm12->in_cur_end - rfm12->in_buf, length);
    
    // if we are not in jee-compatible mode, we dont pass JeeLib hdr/len
    // bytes to userspace.
@@ -1275,6 +1276,8 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
      offset = 2;
      bytes_to_copy = (count > length-2) ? length-2 : count;
    }
+//   printk(KERN_INFO RFM12B_DRV_NAME "now something to read, end in: %d, length=%d, to copy:%d\n",
+//		   rfm12->in_cur_end - rfm12->in_buf, length, bytes_to_copy);
 
    spin_unlock_irqrestore(&rfm12->lock, flags);
    
@@ -1283,13 +1286,16 @@ rfm12_read(struct file* filp, char __user *buf, size_t count, loff_t* f_pos)
    spin_lock_irqsave(&rfm12->lock, flags);
 
    mmovelen = length + 2;
+//   printk(KERN_INFO RFM12B_DRV_NAME "now shifting %d bytes, starting from %d\n",rfm12->in_cur_end - rfm12->in_buf - mmovelen, mmovelen);
    if (mmovelen > 0)
      memmove(rfm12->in_buf,
        rfm12->in_buf + mmovelen,
-       mmovelen);
+       rfm12->in_cur_end - rfm12->in_buf - mmovelen);
 
    rfm12->in_cur_end -= length + 2;
    rfm12->in_buf_pos -= length + 2;
+//   printk(KERN_INFO RFM12B_DRV_NAME "new in_cur_end: %d bytes, new in_buf_pos: %d\n",
+//		   rfm12->in_cur_end -rfm12->in_buf, rfm12->in_buf_pos - rfm12->in_buf);
 
    spin_unlock_irqrestore(&rfm12->lock, flags);
 

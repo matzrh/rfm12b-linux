@@ -17,9 +17,9 @@
 // define constants for protocol in usec
 #define MSG_BREAK		10000
 #define PREAMBLE_STROBE	2650
-#define XMIT_ON_TIME	275
-#define BIT_ON			1180
-#define	BIT_OFF			275
+#define XMIT_ON_TIME	325
+#define BIT_ON			1130
+#define	BIT_OFF			225
 #define SIMPLE_SHORT	960
 #define SIMPLE_LONG		320
 
@@ -139,7 +139,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 	    if (err)
 	    	goto pError;
 
-	    printk(KERN_INFO RFM12B_DRV_NAME " : set up successfully\n");
+//	    printk(KERN_INFO RFM12B_DRV_NAME " : set up successfully\n");
 
 	    return err;
 	} // end rfm12->homeeasy_active

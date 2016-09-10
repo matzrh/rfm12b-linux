@@ -434,7 +434,7 @@ platform_irq_suspend(void* identifier, int resume)
 
 	if (brd->state.irq_claimed) {
 	   if (brd->state.irq_enabled) {
-		   printk( KERN_INFO RFM12B_DRV_NAME " : will now %smask irq\n", resume? "un":"");
+		   //printk( KERN_INFO RFM12B_DRV_NAME " : will now %smask irq\n", resume? "un":"");
 		   if(resume)
 			   brd->irqchip->irq_unmask(brd->irqchip_data);
 		   else
