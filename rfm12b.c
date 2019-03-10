@@ -1568,17 +1568,17 @@ rfm12_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
           if (0 != copy_from_user(&command, (u32*)arg, sizeof(command)))
                 return -EACCES;
 
-          return(rfm12_he_write(rfm12,command,0));
+          return(rfm12_he_write(rfm12,(u64) command,0));
           break;
       }
 
       case RFM12B_IOCTL_WRITE_HOMEEASY_SIMPLE: {
-    	  u16 command;
+    	  u64 command;
 
-    	  if(0 != copy_from_user(&command, (u16*) arg, sizeof(command)))
+    	  if(0 != copy_from_user(&command, (u64*) arg, sizeof(command)))
     		  return -EACCES;
 
-    	  return(rfm12_he_write(rfm12,(u32) command,1));
+    	  return(rfm12_he_write(rfm12,command,1));
     	  break;
       }
 #endif

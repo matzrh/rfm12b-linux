@@ -15,8 +15,17 @@
 // #define USLEEP_AUTORANGE(u) 	(u)-(u)/20,(u)+(u)/20
 
 // define constants for protocol in usec
-#define MSG_BREAK		10000
-#define PREAMBLE_STROBE	2650
+// motor AC114
+#define LPREAMBLE_STROBE 6080
+#define LPREAMBLE_LOW	430
+#define LHIGH_ON		900
+#define LHIGH_OFF		20
+#define LLOW_ON			510
+#define LLOW_OFF		340
+#define LEND_OFF		260
+//HomeEasy Advanced
+#define MSG_BREAK		 10000
+#define PREAMBLE_STROBE	 2650
 #define XMIT_ON_TIME	325
 #define BIT_ON			1130
 #define	BIT_OFF			225
@@ -77,7 +86,7 @@ rfm12_he_setup(struct rfm12_data* rfm12)
 	    spi_message_add_tail(&tr, &msg);
 	    // change to A620 for OOK
 
-	    tr2 = rfm12_make_spi_transfer(0xA620, tx_buf+2, NULL);
+	    tr2 = rfm12_make_spi_transfer(0xA640, tx_buf+2, NULL);
 	    tr2.cs_change = 1;
 	    spi_message_add_tail(&tr2, &msg);
 
@@ -236,11 +245,11 @@ rfm12_msg_debug(struct spi_message *msg){
 
 #define	TX_OOK_BITS 32
 #define TX_OOK_NO    ((TX_OOK_BITS +1) * 4)
-#define TX_SIMPLE_OOK_BITS 12
-#define TX_SIMPLE_NO ((TX_SIMPLE_OOK_BITS) * 4 + 2)
+#define TX_SIMPLE_OOK_BITS 64
+#define TX_SIMPLE_NO ((TX_SIMPLE_OOK_BITS) * 2 + 4)
 
 static int
-rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
+rfm12_he_write(struct rfm12_data* rfm12, u64 command,int simple_flag)
 {
 	int messages = 0;
 	int bit = (simple_flag ? TX_SIMPLE_OOK_BITS : TX_OOK_BITS) - 1;
@@ -252,7 +261,7 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 	if(!rfm12->homeeasy_active)
 		return -EACCES;
 
-	tr = kzalloc(TX_OOK_NO * sizeof(struct spi_transfer),GFP_KERNEL);
+	tr = kzalloc((simple_flag ? TX_SIMPLE_NO : TX_OOK_NO) * sizeof(struct spi_transfer),GFP_KERNEL);
 
 	// put into IDLE mode before starting transfer
 	spi_message_init(&msg);
@@ -262,9 +271,11 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 	err = spi_sync(rfm12->spi,&msg);
 	if(err)
 		return err;
-
-	printk(KERN_INFO RFM12B_DRV_NAME " : writing %04x in OOK mode\n",command);
-
+	if(!simple_flag)
+		printk(KERN_INFO RFM12B_DRV_NAME " : writing %08x in OOK mode\n",(unsigned int) command);
+	else
+		printk(KERN_INFO RFM12B_DRV_NAME " : writing %08x, %08x in OOK mode\n",
+				(unsigned int) (command>>32) ,(unsigned int) command);
 
 	// make the full message with all commands
 	// preliminary, hacked code:   txbuf is never changed, as RF_XMITTER_ON and RF_IDLE_MODE are always sent
@@ -276,14 +287,16 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 	spi_message_init(&msg);
 	if(!simple_flag)
 		ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME,PREAMBLE_STROBE, &msg, tr, tx_buf);
+	else {
+		ret_tr=rfm12_ook_transfer(rfm12,LPREAMBLE_STROBE,LPREAMBLE_LOW, &msg, tr, tx_buf);
+	}
 //	printk(KERN_INFO RFM12B_DRV_NAME " : preamble pointer pos: %d\n", (int) (ret_tr-tr));
 	do
 	{
-		if(command & (1<<bit))
+		if(command & (1ULL<<bit))
 		{
 			if(simple_flag) {
-				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_SHORT,SIMPLE_LONG, &msg,  &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 4], tx_buf);
-				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_LONG,SIMPLE_SHORT, &msg, &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 2], tx_buf);
+				ret_tr=rfm12_ook_transfer(rfm12,LHIGH_ON,LHIGH_OFF, &msg,  &tr[2*(TX_SIMPLE_OOK_BITS-bit)], tx_buf);
 			} else {
 				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_ON, &msg, &tr[4*(TX_OOK_BITS-bit)-2], tx_buf);
 				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BITS-bit)], tx_buf);
@@ -292,8 +305,7 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 		else
 		{
 			if(simple_flag) {
-				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_SHORT,SIMPLE_LONG, &msg, &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 4], tx_buf);
-				ret_tr=rfm12_ook_transfer(rfm12,SIMPLE_SHORT,SIMPLE_LONG, &msg, &tr[4*(TX_SIMPLE_OOK_BITS - bit) - 2], tx_buf);
+				ret_tr=rfm12_ook_transfer(rfm12,LLOW_ON,LLOW_OFF, &msg,  &tr[2*(TX_SIMPLE_OOK_BITS-bit)], tx_buf);
 			} else {
 				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BITS-bit)-2], tx_buf);
 				ret_tr=rfm12_ook_transfer(rfm12,XMIT_ON_TIME, BIT_ON, &msg, &tr[4*(TX_OOK_BITS-bit)], tx_buf);
@@ -302,7 +314,7 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 	} while(bit--);
 	// add one on off cycle at end
 	if(simple_flag)
-		ret_tr=rfm12_ook_transfer(rfm12, SIMPLE_SHORT, SIMPLE_LONG, &msg, &tr[4*(TX_SIMPLE_OOK_BITS)], tx_buf);
+		ret_tr=rfm12_ook_transfer(rfm12, LHIGH_ON, LEND_OFF, &msg, &tr[TX_SIMPLE_NO-2],tx_buf);
 	else
 		ret_tr=rfm12_ook_transfer(rfm12, XMIT_ON_TIME, BIT_OFF, &msg, &tr[4*(TX_OOK_BITS)+2], tx_buf);
 //	rfm12_msg_debug(&msg);
@@ -313,7 +325,8 @@ rfm12_he_write(struct rfm12_data* rfm12, u32 command,int simple_flag)
 		err = spi_sync(rfm12->spi, &msg);
 		if(err)
 			return err;
-		rfm12_safe_udelay(MSG_BREAK-BIT_OFF);
+		if(!simple_flag)
+			rfm12_safe_udelay(MSG_BREAK-BIT_OFF);
 	}
 
 	// put into sleep mode when done
